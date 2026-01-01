@@ -338,6 +338,18 @@ with st.sidebar:
 
     weights = normalize_weights(weights_raw)
 
+    # --- Mode focus 100% (graphes uniquement, sliders inchangés) ---
+    st.markdown("---")
+    st.caption("mode focus (graphes uniquement)")
+
+    focus_options = ["(aucun)"] + [f"{name_map.get(i,'')} — {i}" for i in isins]
+    focus_choice = st.selectbox("afficher 100% sur :", focus_options, index=0)
+
+    focus_isin = None
+    if focus_choice != "(aucun)":
+        focus_isin = focus_choice.split(" — ")[-1].strip()
+
+
     st.caption("poids normalisés (référence)")
     for isin, w in sorted(weights.items(), key=lambda kv: kv[1], reverse=True):
         st.write(f"**{name_map.get(isin, '')}** — `{isin}` : **{w:.1%}**")
@@ -355,12 +367,19 @@ with st.sidebar:
         write_tab(sh, WEIGHTS_TAB, df_out)
         st.success("sauvegardé ✅")
 
+# Poids effectifs pour les graphes (focus si activé)
+if "focus_isin" in locals() and focus_isin in isins:
+    weights_effective = {i: (1.0 if i == focus_isin else 0.0) for i in isins}
+else:
+    weights_effective = weights
 
+if "focus_isin" in locals() and focus_isin:
+    st.info(f"mode focus actif : **{name_map.get(focus_isin,'')}** ({focus_isin}) → graphes à 100% sur cet ETF")
 
 # Aggregate
-df_sector = aggregate(expos_by_isin, weights, "sector")
-df_curr = aggregate(expos_by_isin, weights, "currency")
-df_ctry = aggregate(expos_by_isin, weights, "country")
+df_sector = aggregate(expos_by_isin, weights_effective, "sector")
+df_curr = aggregate(expos_by_isin, weights_effective, "currency")
+df_ctry = aggregate(expos_by_isin, weights_effective, "country")
 
 # Charts
 c1, c2, c3 = st.columns(3)
