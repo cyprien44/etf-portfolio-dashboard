@@ -90,12 +90,20 @@ def bar_chart_top(df: pd.DataFrame, title: str):
         text=d["exposure"].map(lambda v: f"{v:.1%}")  # affichage % sur les barres
     )
     fig.update_traces(textposition="outside", cliponaxis=False)
+    height = max(520, 22 * len(d) + 160)  # ~22px par ligne
     fig.update_layout(
         yaxis_title="",
         xaxis_tickformat=".1%",
         margin=dict(l=10, r=10, t=30, b=10),
-        height=500, 
+        height=height,
     )
+    fig.update_yaxes(
+        tickmode="array",
+        tickvals=d["label"].tolist(),
+        ticktext=d["label"].tolist(),
+        automargin=True,
+    )
+
     st.plotly_chart(fig, use_container_width=True)
 
 @st.cache_data(ttl=3600, show_spinner=False)
