@@ -7,6 +7,7 @@ import requests
 import streamlit as st
 import plotly.express as px
 import pycountry
+import unicodedata
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -213,18 +214,39 @@ COUNTRY_FIX = {
 
 
 
-def country_to_iso3(label: str) -> Optional[str]:
+def _norm(s: str) -> str:
+    s = (s or "").strip()
+    # enlève accents
+    s = unicodedata.normalize("NFKD", s)
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = s.lower()
+    # normalise tirets/espaces
+    s = s.replace("-", "-").replace("–", "-")
+    s = re.sub(r"[-/]", " ", s)
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def country_to_iso3(label: str):
     if not isinstance(label, str) or not label.strip():
         return None
-    s = label.strip()
-    if s.lower() in ["autres", "others", "autre"]:
+
+    s = _norm(label)
+    if s in {"autres", "others", "autre"}:
         return None
-    s = COUNTRY_FIX.get(s, s)
+
+    # 1) mapping direct iso3
+    if s in COUNTRY_TO_ISO3:
+        return COUNTRY_TO_ISO3[s]
+
+    # 2) fallback pycountry (utile si un pays pas dans le dict)
     try:
-        c = pycountry.countries.search_fuzzy(s)[0]
-        return c.alpha_3
+        # on tente avec le label original + la version normalisée "title"
+        for candidate in [label.strip(), s.title()]:
+            c = pycountry.countries.search_fuzzy(candidate)[0]
+            return c.alpha_3
     except Exception:
         return None
+
 
 
 # -----------------------------
