@@ -465,6 +465,9 @@ else:
         hover_name="label",
         color_continuous_scale="Blues",
     )
+    fig.update_traces(
+        hovertemplate="<b>%{hovertext}</b><br>exposure: %{z:.2%}<extra></extra>"
+    )
     fig.update_layout(
         height=700,  # 👈 plus gros
         margin=dict(l=0, r=0, t=10, b=0),
