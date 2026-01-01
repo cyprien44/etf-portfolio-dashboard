@@ -297,7 +297,7 @@ if errors:
 
 isins = sorted(expos_by_isin.keys())
 #name_map = {str(r["isin"]).strip(): str(r["etf_name"]).strip() for _, r in df_active.iterrows()}
-#name_map = { str(r["etf_name"]).strip() for _, r in df_active.iterrows()}
+name_map = {str(r["etf_name"]).strip() for _, r in df_active.iterrows()}
 if not isins:
     st.error("Aucun ETF n'a pu être chargé. Vérifie les liens Drive et les onglets Amundi.")
     st.stop()
