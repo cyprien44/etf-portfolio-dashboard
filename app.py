@@ -182,9 +182,22 @@ def read_exposures_from_excel(xlsx_bytes: bytes) -> Tuple[pd.DataFrame, pd.DataF
 # Country mapping to ISO3 (for map)
 # -----------------------------
 COUNTRY_FIX = {
+    # déjà / variantes utiles
     "États-Unis": "United States",
     "Etats-Unis": "United States",
     "Royaume-Uni": "United Kingdom",
+
+    # ajouts utiles (ta liste)
+    "Japon": "Japan",
+    "Canada": "Canada",
+    "Suisse": "Switzerland",
+    "France": "France",
+    "Allemagne": "Germany",
+    "Australie": "Australia",
+    "Pays-Bas": "Netherlands",
+    "Espagne": "Spain",
+
+    # ceux que tu avais déjà (tu peux garder)
     "Corée du Sud": "Korea, Republic of",
     "Corée du sud": "Korea, Republic of",
     "Russie": "Russian Federation",
@@ -197,6 +210,7 @@ COUNTRY_FIX = {
     "Brésil": "Brazil",
     "Mexique": "Mexico",
 }
+
 
 
 def country_to_iso3(label: str) -> Optional[str]:
