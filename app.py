@@ -87,7 +87,7 @@ def bar_chart_top(df: pd.DataFrame, title: str):
         x="exposure",
         y="label",
         orientation="h",
-        text=d["exposure"].map(lambda v: f"{v:.1%}")  # affichage % sur les barres
+        text=d["exposure"].map(lambda v: f"{v:.2%}")  # affichage % sur les barres
     )
     fig.update_traces(textposition="outside", cliponaxis=False)
     height = max(520, 12 * len(d) + 160)  # ~15px par ligne
