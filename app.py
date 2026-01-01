@@ -296,8 +296,7 @@ if errors:
     st.dataframe(pd.DataFrame(errors, columns=["isin", "error"]), use_container_width=True)
 
 isins = sorted(expos_by_isin.keys())
-#name_map = {str(r["isin"]).strip(): str(r["etf_name"]).strip() for _, r in df_active.iterrows()}
-name_map = {str(r["etf_name"]).strip() for _, r in df_active.iterrows()}
+name_map = {str(r["isin"]).strip(): str(r["etf_name"]).strip() for _, r in df_active.iterrows()}
 if not isins:
     st.error("Aucun ETF n'a pu être chargé. Vérifie les liens Drive et les onglets Amundi.")
     st.stop()
@@ -320,15 +319,14 @@ with st.sidebar:
     default_equal = 1.0 / len(isins) if len(isins) else 0.0
 
     for isin in isins:
-        label = f"{isin} — {name_map.get(isin, '')}".strip()
-        weights_raw[isin] = st.slider(label, 0.0, 1.0, float(w_map.get(isin, default_equal)), 0.01)
+        etf_name = name_map.get(isin, isin)  # fallback = ISIN si pas trouvé
+        weights_raw[isin] = st.slider(etf_name, 0.0, 1.0, float(w_map.get(isin, default_equal)), 0.01)
 
     weights = normalize_weights(weights_raw)
 
-    # Afficher les % normalisés à côté (liste triée)
-    st.caption("poids normalisés")
+    st.caption("poids normalisés (référence)")
     for isin, w in sorted(weights.items(), key=lambda kv: kv[1], reverse=True):
-        st.write(f"**{isin}** — {name_map.get(isin, '')} : **{w:.1%}**")
+        st.write(f"**{name_map.get(isin, '')}** — `{isin}` : **{w:.1%}**")
 
     st.caption(f"somme normalisée = {sum(weights.values()):.2f}")
 
@@ -342,6 +340,7 @@ with st.sidebar:
         df_out = pd.concat([df_keep, df_new], ignore_index=True)
         write_tab(sh, WEIGHTS_TAB, df_out)
         st.success("sauvegardé ✅")
+
 
 
 # Aggregate
