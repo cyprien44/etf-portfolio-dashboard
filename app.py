@@ -313,6 +313,20 @@ df_files = read_tab(sh, FILES_TAB)
 df_weights_all = read_tab(sh, WEIGHTS_TAB) if WEIGHTS_TAB in [w.title for w in sh.worksheets()] else pd.DataFrame(
     columns=["user", "isin", "weight"]
 )
+# Liste des users uniques (nettoyée)
+users = (
+    df_weights_all["user"]
+    .dropna()
+    .astype(str)
+    .str.strip()
+    .str.lower()
+    .unique()
+    .tolist()
+)
+
+# fallback sécurité
+if not users:
+    users = ["cyprien"]
 
 # Validate files_link
 required = {"isin", "etf_name", "excel_url", "active"}
@@ -331,7 +345,11 @@ if df_active.empty:
 # Sidebar controls
 with st.sidebar:
     st.header("paramètres")
-    user = st.text_input("user", value="cyprien").strip().lower()
+    user = st.selectbox(
+        "utilisateur",
+        options=sorted(users),
+        index=users.index("cyprien") if "cyprien" in users else 0,
+    )
     top_n = st.slider("top N", 5, 70, 20)
     if st.button("recharger les excels"):
         # Clear caches (download + parsing) if you updated files in Drive
