@@ -439,7 +439,14 @@ with c2:
 with c3:
     bar_chart_top(df_ctry, "pays")
 
+missing = df_ctry.copy()
+missing["iso3"] = missing["label"].map(country_to_iso3)
+missing = missing[missing["iso3"].isna() & ~missing["label"].astype(str).str.lower().isin(["autres","others","autre"])]
 
+if not missing.empty:
+    st.warning("Pays non reconnus pour la carte (mapping à compléter) :")
+    st.dataframe(missing[["label","exposure"]].sort_values("exposure", ascending=False), use_container_width=True)
+    
 # Map
 st.subheader("carte — exposition pays")
 df_map = df_ctry.copy()
