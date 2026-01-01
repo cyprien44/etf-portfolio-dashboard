@@ -284,7 +284,7 @@ if df_active.empty:
 with st.sidebar:
     st.header("paramètres")
     user = st.text_input("user", value="cyprien").strip().lower()
-    top_n = st.slider("top N", 5, 50, 15)
+    top_n = st.slider("top N", 5, 50, 20)
     if st.button("recharger les excels"):
         # Clear caches (download + parsing) if you updated files in Drive
         st.cache_data.clear()
