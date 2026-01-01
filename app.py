@@ -74,6 +74,27 @@ def drive_to_download_url(url: str) -> str:
 
     return url
 
+def bar_chart_top(df: pd.DataFrame, title: str):
+    st.subheader(title)
+    d = df.head(top_n).copy()
+    # Pour avoir les plus gros en haut (Plotly met le 1er en bas en horizontal)
+    d = d.sort_values("exposure", ascending=True)
+
+    fig = px.bar(
+        d,
+        x="exposure",
+        y="label",
+        orientation="h",
+        text=d["exposure"].map(lambda v: f"{v:.1%}")  # affichage % sur les barres
+    )
+    fig.update_traces(textposition="outside", cliponaxis=False)
+    fig.update_layout(
+        yaxis_title="",
+        xaxis_tickformat=".1%",
+        margin=dict(l=10, r=10, t=30, b=10),
+        height=520, 
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_excel_bytes(url: str) -> bytes:
@@ -275,6 +296,7 @@ if errors:
     st.dataframe(pd.DataFrame(errors, columns=["isin", "error"]), use_container_width=True)
 
 isins = sorted(expos_by_isin.keys())
+name_map = {str(r["isin"]).strip(): str(r["etf_name"]).strip() for _, r in df_active.iterrows()}
 if not isins:
     st.error("Aucun ETF n'a pu être chargé. Vérifie les liens Drive et les onglets Amundi.")
     st.stop()
@@ -292,20 +314,34 @@ if not df_user_w.empty:
 # Weight sliders
 with st.sidebar:
     st.subheader("poids du portefeuille")
-    weights = {}
-    default_equal = 1.0 / len(isins) if len(isins) else 0.0
-    for isin in isins:
-        weights[isin] = st.slider(isin, 0.0, 1.0, float(w_map.get(isin, default_equal)), 0.01)
+    weights_raw = {}
 
-    weights = normalize_weights(weights)
+    default_equal = 1.0 / len(isins) if len(isins) else 0.0
+
+    for isin in isins:
+        label = f"{isin} — {name_map.get(isin, '')}".strip()
+        weights_raw[isin] = st.slider(label, 0.0, 1.0, float(w_map.get(isin, default_equal)), 0.01)
+
+    weights = normalize_weights(weights_raw)
+
+    # Afficher les % normalisés à côté (liste triée)
+    st.caption("poids normalisés")
+    for isin, w in sorted(weights.items(), key=lambda kv: kv[1], reverse=True):
+        st.write(f"**{isin}** — {name_map.get(isin, '')} : **{w:.1%}**")
+
     st.caption(f"somme normalisée = {sum(weights.values()):.2f}")
 
     if st.button("save weights"):
-        df_keep = df_weights_all[df_weights_all["user"].astype(str).str.lower() != user].copy() if not df_weights_all.empty else pd.DataFrame(columns=["user","isin","weight"])
+        df_keep = (
+            df_weights_all[df_weights_all["user"].astype(str).str.lower() != user].copy()
+            if not df_weights_all.empty
+            else pd.DataFrame(columns=["user", "isin", "weight"])
+        )
         df_new = pd.DataFrame([{"user": user, "isin": k, "weight": v} for k, v in weights.items()])
         df_out = pd.concat([df_keep, df_new], ignore_index=True)
         write_tab(sh, WEIGHTS_TAB, df_out)
         st.success("sauvegardé ✅")
+
 
 # Aggregate
 df_sector = aggregate(expos_by_isin, weights, "sector")
@@ -316,22 +352,14 @@ df_ctry = aggregate(expos_by_isin, weights, "country")
 c1, c2, c3 = st.columns(3)
 
 with c1:
-    st.subheader("secteurs")
-    fig = px.bar(df_sector.head(top_n), x="exposure", y="label", orientation="h")
-    fig.update_layout(yaxis_title="", xaxis_tickformat=".1%")
-    st.plotly_chart(fig, use_container_width=True)
+    bar_chart_top(df_sector, "secteurs")
 
 with c2:
-    st.subheader("devises")
-    fig = px.bar(df_curr.head(top_n), x="exposure", y="label", orientation="h")
-    fig.update_layout(yaxis_title="", xaxis_tickformat=".1%")
-    st.plotly_chart(fig, use_container_width=True)
+    bar_chart_top(df_curr, "devises")
 
 with c3:
-    st.subheader("pays")
-    fig = px.bar(df_ctry.head(top_n), x="exposure", y="label", orientation="h")
-    fig.update_layout(yaxis_title="", xaxis_tickformat=".1%")
-    st.plotly_chart(fig, use_container_width=True)
+    bar_chart_top(df_ctry, "pays")
+
 
 # Map
 st.subheader("carte — exposition pays")
@@ -342,8 +370,18 @@ df_map = df_map.dropna(subset=["iso3"])
 if df_map.empty:
     st.info("Impossible d'afficher la carte (pays non mappés). On pourra enrichir le mapping ensuite.")
 else:
-    fig = px.choropleth(df_map, locations="iso3", color="exposure", hover_name="label", color_continuous_scale="Blues")
-    fig.update_layout(coloraxis_colorbar=dict(title="Exposure"))
+    fig = px.choropleth(
+        df_map,
+        locations="iso3",
+        color="exposure",
+        hover_name="label",
+        color_continuous_scale="Blues",
+    )
+    fig.update_layout(
+        height=700,  # 👈 plus gros
+        margin=dict(l=0, r=0, t=10, b=0),
+        coloraxis_colorbar=dict(title="Exposure", tickformat=".0%"),
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 with st.expander("debug"):
