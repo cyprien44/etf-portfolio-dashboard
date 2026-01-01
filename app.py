@@ -182,36 +182,60 @@ def read_exposures_from_excel(xlsx_bytes: bytes) -> Tuple[pd.DataFrame, pd.DataF
 # -----------------------------
 # Country mapping to ISO3 (for map)
 # -----------------------------
-COUNTRY_FIX = {
-    # déjà / variantes utiles
-    "États-Unis": "United States",
-    "Etats-Unis": "United States",
-    "Royaume-Uni": "United Kingdom",
+COUNTRY_TO_ISO3 = {
+    # amériques / dev
+    "etats unis": "USA",
+    "royaume uni": "GBR",
+    "japon": "JPN",
+    "canada": "CAN",
+    "suisse": "CHE",
+    "france": "FRA",
+    "allemagne": "DEU",
+    "australie": "AUS",
+    "pays bas": "NLD",
+    "espagne": "ESP",
+    "suede": "SWE",
+    "italie": "ITA",
+    "danemark": "DNK",
+    "finlande": "FIN",
+    "belgique": "BEL",
+    "norvege": "NOR",
+    "irlande": "IRL",
+    "autriche": "AUT",
+    "portugal": "PRT",
+    "pologne": "POL",
+    "republique tcheque": "CZE",
+    "grece": "GRC",
 
-    # ajouts utiles (ta liste)
-    "Japon": "Japan",
-    "Canada": "Canada",
-    "Suisse": "Switzerland",
-    "France": "France",
-    "Allemagne": "Germany",
-    "Australie": "Australia",
-    "Pays-Bas": "Netherlands",
-    "Espagne": "Spain",
+    # asie / em
+    "chine": "CHN",
+    "taiwan": "TWN",
+    "inde": "IND",
+    "coree du sud": "KOR",
+    "malaisie": "MYS",
+    "indonesie": "IDN",
+    "thailande": "THA",
+    "philippines": "PHL",
+    "singapour": "SGP",
+    "hong kong": "HKG",
+    "nouvelle zelande": "NZL",
+    "arabie saoudite": "SAU",
+    "emirats arabes unis": "ARE",
+    "qatar": "QAT",
+    "koweit": "KWT",
+    "turquie": "TUR",
 
-    # ceux que tu avais déjà (tu peux garder)
-    "Corée du Sud": "Korea, Republic of",
-    "Corée du sud": "Korea, Republic of",
-    "Russie": "Russian Federation",
-    "Émirats arabes unis": "United Arab Emirates",
-    "Emirats arabes unis": "United Arab Emirates",
-    "République tchèque": "Czechia",
-    "Republique tcheque": "Czechia",
-    "Chine": "China",
-    "Inde": "India",
-    "Brésil": "Brazil",
-    "Mexique": "Mexico",
+    # afrique / latam
+    "afrique du sud": "ZAF",
+    "bresil": "BRA",
+    "mexique": "MEX",
+    "chili": "CHL",
+    "perou": "PER",
+    "colombie": "COL",
+
+    # russie (si tu en as)
+    "russie": "RUS",
 }
-
 
 
 def _norm(s: str) -> str:
