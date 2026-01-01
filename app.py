@@ -202,6 +202,7 @@ COUNTRY_TO_ISO3 = {
     "norvege": "NOR",
     "irlande": "IRL",
     "autriche": "AUT",
+    "hongrie": "HUN",
     "portugal": "PRT",
     "pologne": "POL",
     "republique tcheque": "CZE",
