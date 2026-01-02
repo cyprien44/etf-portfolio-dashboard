@@ -648,13 +648,13 @@ r2c1, r2c2 = st.columns(2)
 with r2c1:
     st.metric("Nombre d'actions pondérées (estim.)", f"{stocks_universe:,.0f}".replace(",", " "))
 with r2c2:
-    st.metric("Nombre d'actions uniques (estim.)", f"{stocks_unique_est:,.0f}".replace(",", " "))
+    st.metric("Nombre d'actions uniques total", f"{stocks_unique_est:,.0f}".replace(",", " "))
 
 r3c1, r3c2 = st.columns(2)
 with r3c1:
-    st.metric("Nombre de pays pondérés (N_eff)", f"{countries_effective:.2f}")
+    st.metric("Nombre de pays pondérés (estim.)", f"{countries_effective:.2f}")
 with r3c2:
-    st.metric("Nombre de pays uniques", f"{countries_unique:d}")
+    st.metric("Nombre de pays uniques total", f"{countries_unique:d}")
 
 
 # Charts
