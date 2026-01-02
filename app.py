@@ -22,6 +22,34 @@ TAB_COUNTRY = "Répartition par pays"
 TAB_CURRENCY = "Répartition par devise"
 TAB_SECTOR = "Répartition par secteur"
 
+ETF_BUCKET = {
+    "IE0002XZSH01": "WORLD",    # iShares MSCI World Swap PEA
+    "FR0013412038": "EUROPE",   # Amundi PEA MSCI Europe
+    "FR0011869312": "ASIA",     # Amundi PEA Asie Pacifique
+    "FR0013412020": "EM",       # Amundi PEA MSCI Emerging Markets ESG
+    "FR0013412004": "LATAM",    # Amundi PEA MSCI Emerging Latin America
+}
+
+OVERLAP = {
+    # MSCI World
+    ("WORLD", "EUROPE"): 0.25,
+    ("WORLD", "EM"): 0.10,
+    ("WORLD", "ASIA"): 0.05,
+    ("WORLD", "LATAM"): 0.03,
+
+    # Europe
+    ("EUROPE", "EM"): 0.05,
+    ("EUROPE", "ASIA"): 0.00,
+    ("EUROPE", "LATAM"): 0.00,
+
+    # Emerging Markets
+    ("EM", "ASIA"): 0.55,
+    ("EM", "LATAM"): 0.05,
+
+    # Sub EM
+    ("ASIA", "LATAM"): 0.00,
+}
+
 
 # -----------------------------
 # Google auth / Sheets
@@ -307,6 +335,91 @@ def aggregate(expos_by_isin: Dict[str, Dict[str, pd.DataFrame]], weights: Dict[s
     out = out.groupby("label", as_index=False)["exposure"].sum().sort_values("exposure", ascending=False)
     return out
 
+def estimate_stocks_universe(meta_by_isin, weights, etf_bucket, overlap):
+    """
+    Estime le nombre d'actions effectivement exposées,
+    en tenant compte :
+    - des poids normalisés
+    - des overlaps structurels entre indices
+    """
+
+    # 1️⃣ ETFs actifs
+    active_isins = [isin for isin, w in weights.items() if w > 0]
+
+    # 2️⃣ Somme pondérée brute
+    total = 0.0
+    for isin in active_isins:
+        w = weights.get(isin, 0.0)
+        n = meta_by_isin.get(isin, {}).get("Stocks number")
+        if pd.notna(n):
+            total += w * float(n)
+
+    # 3️⃣ Correction d'overlap pondérée
+    overlap_penalty = 0.0
+    for i, isin_i in enumerate(active_isins):
+        for isin_j in active_isins[i + 1:]:
+            w_i = weights.get(isin_i, 0.0)
+            w_j = weights.get(isin_j, 0.0)
+
+            b_i = etf_bucket.get(isin_i)
+            b_j = etf_bucket.get(isin_j)
+
+            if not b_i or not b_j:
+                continue
+
+            key = (b_i, b_j)
+            key_rev = (b_j, b_i)
+            ov = overlap.get(key, overlap.get(key_rev, 0.0))
+
+            if ov > 0:
+                n_i = meta_by_isin.get(isin_i, {}).get("Stocks number", 0)
+                n_j = meta_by_isin.get(isin_j, {}).get("Stocks number", 0)
+
+                overlap_penalty += ov * min(n_i, n_j) * min(w_i, w_j)
+
+    return max(total - overlap_penalty, 0)
+
+
+
+def estimate_stocks_unique(meta_by_isin, weights, etf_bucket, overlap):
+    """
+    Estimation du nombre d'actions uniques
+    - présence binaire (poids > 0 => ETF actif)
+    - correction par overlap entre univers
+    """
+
+    # ETFs réellement présents
+    active_isins = [isin for isin, w in weights.items() if w > 0]
+
+    # base : somme brute
+    total = 0.0
+    for isin in active_isins:
+        n = meta_by_isin.get(isin, {}).get("Stocks number")
+        if pd.notna(n):
+            total += float(n)
+
+    # correction overlap pairwise
+    overlap_penalty = 0.0
+    for i, isin_i in enumerate(active_isins):
+        for isin_j in active_isins[i+1:]:
+            b_i = etf_bucket.get(isin_i)
+            b_j = etf_bucket.get(isin_j)
+            if not b_i or not b_j:
+                continue
+
+            key = (b_i, b_j)
+            key_rev = (b_j, b_i)
+            ov = overlap.get(key, overlap.get(key_rev, 0.0))
+
+            if ov > 0:
+                n_i = meta_by_isin.get(isin_i, {}).get("Stocks number", 0)
+                n_j = meta_by_isin.get(isin_j, {}).get("Stocks number", 0)
+                overlap_penalty += ov * min(n_i, n_j)
+
+    return max(total - overlap_penalty, 0)
+
+
+
 
 # -----------------------------
 # UI
@@ -337,7 +450,7 @@ if not users:
     users = ["cyprien"]
 
 # Validate files_link
-required = {"isin", "etf_name", "excel_url", "active"}
+required = {"isin", "etf_name", "excel_url", "active", "Stocks number", "TER"}
 missing = required - set(df_files.columns)
 if missing:
     st.error(f"Onglet `{FILES_TAB}`: colonnes manquantes {sorted(missing)}")
@@ -345,6 +458,20 @@ if missing:
 
 df_files["active"] = df_files["active"].astype(str).str.lower()
 df_active = df_files[df_files["active"].isin(["1", "true", "yes", "y"])].copy()
+
+
+# Stocks number -> int
+df_active["Stocks number"] = pd.to_numeric(df_active["Stocks number"], errors="coerce")
+
+# TER
+df_active["TER"] = (
+    df_active["TER"]
+    .astype(str)
+    .str.replace("%", "", regex=False)
+    .str.replace(",", ".", regex=False)
+    .str.strip()
+)
+df_active["TER"] = pd.to_numeric(df_active["TER"], errors="coerce")  / 100.0
 
 if df_active.empty:
     st.warning("Aucun ETF actif dans `files_link` (colonne active=1).")
@@ -388,6 +515,11 @@ name_map = {str(r["isin"]).strip(): str(r["etf_name"]).strip() for _, r in df_ac
 if not isins:
     st.error("Aucun ETF n'a pu être chargé. Vérifie les liens Drive et les onglets Amundi.")
     st.stop()
+
+meta_by_isin = (
+    df_active.set_index("isin")[["Stocks number", "TER"]]
+    .to_dict(orient="index")
+)
 
 # Load user weights
 df_user_w = df_weights_all[df_weights_all["user"].astype(str).str.lower() == user].copy() if not df_weights_all.empty else pd.DataFrame()
@@ -446,6 +578,32 @@ if "focus_isin" in locals() and focus_isin in isins:
     weights_effective = {i: (1.0 if i == focus_isin else 0.0) for i in isins}
 else:
     weights_effective = weights
+# TER
+w_ter = 0.0
+w_sum = 0.0
+for isin, w in weights.items():  # <- IMPORTANT: weights (normaux), pas weights_effective
+    ter = meta_by_isin.get(isin, {}).get("TER")
+    if ter is None or pd.isna(ter) or w <= 0:
+        continue
+    w_ter += w * float(ter)
+    w_sum += w
+
+ter_weighted = (w_ter / w_sum) if w_sum > 0 else None
+
+stocks_universe = estimate_stocks_universe(
+    meta_by_isin=meta_by_isin,
+    weights=weights,          # poids normaux
+    etf_bucket=ETF_BUCKET,
+    overlap=OVERLAP,
+)
+
+stocks_unique_est = estimate_stocks_unique(
+    meta_by_isin=meta_by_isin,
+    weights=weights,          # utilisé seulement pour détecter w>0 (binaire)
+    etf_bucket=ETF_BUCKET,
+    overlap=OVERLAP,
+)
+
 
 if "focus_isin" in locals() and focus_isin:
     st.info(f"mode focus actif : **{name_map.get(focus_isin,'')}** ({focus_isin}) → graphes à 100% sur cet ETF")
@@ -454,6 +612,19 @@ if "focus_isin" in locals() and focus_isin:
 df_sector = aggregate(expos_by_isin, weights_effective, "sector")
 df_curr = aggregate(expos_by_isin, weights_effective, "currency")
 df_ctry = aggregate(expos_by_isin, weights_effective, "country")
+
+st.markdown("### résumé du portefeuille")
+
+#Stats
+m1, m2, m3 = st.columns(3)
+with m1:
+    st.metric("TER moyen (pondéré)", f"{ter_weighted:.2%}")
+
+with m2:
+    st.metric("actions (univers)", f"{stocks_universe:,}".replace(",", " "))
+
+with m3:
+    st.metric("actions uniques (estim.)", f"{stocks_unique_est:,.0f}".replace(",", " "))
 
 # Charts
 c1, c2, c3 = st.columns(3)
