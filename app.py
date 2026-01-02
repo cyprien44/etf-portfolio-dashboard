@@ -52,6 +52,66 @@ OVERLAP = {
 
 
 # -----------------------------
+# Country mapping to ISO3 (for map)
+# -----------------------------
+COUNTRY_TO_ISO3 = {
+    # amériques / dev
+    "etats unis": "USA",
+    "royaume uni": "GBR",
+    "japon": "JPN",
+    "canada": "CAN",
+    "suisse": "CHE",
+    "france": "FRA",
+    "allemagne": "DEU",
+    "australie": "AUS",
+    "pays bas": "NLD",
+    "espagne": "ESP",
+    "suede": "SWE",
+    "italie": "ITA",
+    "danemark": "DNK",
+    "finlande": "FIN",
+    "belgique": "BEL",
+    "norvege": "NOR",
+    "irlande": "IRL",
+    "autriche": "AUT",
+    "hongrie": "HUN",
+    "portugal": "PRT",
+    "pologne": "POL",
+    "republique tcheque": "CZE",
+    "grece": "GRC",
+
+    # asie / em
+    "chine": "CHN",
+    "taiwan": "TWN",
+    "inde": "IND",
+    "coree du sud": "KOR",
+    "malaisie": "MYS",
+    "indonesie": "IDN",
+    "thailande": "THA",
+    "philippines": "PHL",
+    "singapour": "SGP",
+    "hong kong": "HKG",
+    "nouvelle zelande": "NZL",
+    "arabie saoudite": "SAU",
+    "emirats arabes unis": "ARE",
+    "qatar": "QAT",
+    "koweit": "KWT",
+    "turquie": "TUR",
+
+    # afrique / latam
+    "afrique du sud": "ZAF",
+    "bresil": "BRA",
+    "mexique": "MEX",
+    "chili": "CHL",
+    "perou": "PER",
+    "colombie": "COL",
+
+    # russie (si tu en as)
+    "russie": "RUS",
+}
+
+
+# -----------------------------
 # Google auth / Sheets
 # -----------------------------
 def get_gspread_client() -> gspread.Client:
@@ -214,66 +274,6 @@ def read_exposures_from_excel(xlsx_bytes: bytes) -> Tuple[pd.DataFrame, pd.DataF
     df_curr = parse_amundi_table(pd.read_excel(xls, sheet_name=TAB_CURRENCY))
     df_sector = parse_amundi_table(pd.read_excel(xls, sheet_name=TAB_SECTOR))
     return df_country, df_curr, df_sector
-
-
-# -----------------------------
-# Country mapping to ISO3 (for map)
-# -----------------------------
-COUNTRY_TO_ISO3 = {
-    # amériques / dev
-    "etats unis": "USA",
-    "royaume uni": "GBR",
-    "japon": "JPN",
-    "canada": "CAN",
-    "suisse": "CHE",
-    "france": "FRA",
-    "allemagne": "DEU",
-    "australie": "AUS",
-    "pays bas": "NLD",
-    "espagne": "ESP",
-    "suede": "SWE",
-    "italie": "ITA",
-    "danemark": "DNK",
-    "finlande": "FIN",
-    "belgique": "BEL",
-    "norvege": "NOR",
-    "irlande": "IRL",
-    "autriche": "AUT",
-    "hongrie": "HUN",
-    "portugal": "PRT",
-    "pologne": "POL",
-    "republique tcheque": "CZE",
-    "grece": "GRC",
-
-    # asie / em
-    "chine": "CHN",
-    "taiwan": "TWN",
-    "inde": "IND",
-    "coree du sud": "KOR",
-    "malaisie": "MYS",
-    "indonesie": "IDN",
-    "thailande": "THA",
-    "philippines": "PHL",
-    "singapour": "SGP",
-    "hong kong": "HKG",
-    "nouvelle zelande": "NZL",
-    "arabie saoudite": "SAU",
-    "emirats arabes unis": "ARE",
-    "qatar": "QAT",
-    "koweit": "KWT",
-    "turquie": "TUR",
-
-    # afrique / latam
-    "afrique du sud": "ZAF",
-    "bresil": "BRA",
-    "mexique": "MEX",
-    "chili": "CHL",
-    "perou": "PER",
-    "colombie": "COL",
-
-    # russie (si tu en as)
-    "russie": "RUS",
-}
 
 
 def _norm(s: str) -> str:
