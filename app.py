@@ -631,8 +631,14 @@ with st.sidebar:
             }
             for k, v in weights.items()
         ])
+        df_out = pd.concat([df_keep, df_new], ignore_index=True)
 
-        write_tab(sh, WEIGHTS_TAB, df_new)
+        # ✅ anti-NaN / anti-Inf (obligatoire pour JSON)
+        df_out = df_out.replace([float("inf"), float("-inf")], None)
+        df_out = df_out.where(pd.notna(df_out), None)
+        
+        write_tab(sh, WEIGHTS_TAB, df_out)
+        
         st.success("sauvegardé ✅")
 
 # Poids effectifs pour les graphes (focus si activé)
