@@ -624,7 +624,7 @@ with m2:
     st.metric("actions (univers)", f"{stocks_universe:,.0f}".replace(",", " "))
 
 with m3:
-    st.metric("actions uniques (estim.)", f"{stocks_unique_est:,.0f}".replace(",", " "))
+    st.metric("Nombre d'actions total", f"{stocks_unique_est:,.0f}".replace(",", " "))
 
 # Charts
 c1, c2, c3 = st.columns(3)
