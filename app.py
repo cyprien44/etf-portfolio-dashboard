@@ -342,7 +342,7 @@ def country_to_iso3(label: str):
 # -----------------------------
 
 def parse_weight(x) -> float:
-    """Accepte 0.20, 0,20, '20', '20,0' et renvoie un float en [0..1] si possible."""
+    """Parse un poids au format FR/EN, attendu en décimal 0..1 (ex: 0,20)."""
     if x is None or (isinstance(x, float) and pd.isna(x)):
         return 0.0
 
@@ -350,12 +350,17 @@ def parse_weight(x) -> float:
     if not s:
         return 0.0
 
-    # enlève espaces / nbsp, puis virgule -> point
     s = s.replace("\u00a0", "").replace(" ", "").replace(",", ".")
 
     try:
         v = float(s)
     except Exception:
+        return 0.0
+
+    # strict: poids = décimal 0..1 uniquement
+    if v < 0 or v > 1:
+        # tu peux logger si tu veux
+        # st.warning(f"Poids invalide détecté dans Google Sheets: {x} (attendu 0..1). Mis à 0.")
         return 0.0
 
     return v
