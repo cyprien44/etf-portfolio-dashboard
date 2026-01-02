@@ -622,9 +622,17 @@ with st.sidebar:
             if not df_weights_all.empty
             else pd.DataFrame(columns=["user", "isin", "weight"])
         )
-        df_new = pd.DataFrame([{"user": user, "isin": k, "weight": v} for k, v in weights.items()])
-        df_out = pd.concat([df_keep, df_new], ignore_index=True)
-        write_tab(sh, WEIGHTS_TAB, df_out)
+        df_new = pd.DataFrame([
+            {
+                "user": user,
+                "isin": k,
+                "etf_name": name_map.get(k, ""), 
+                "weight": float(v),
+            }
+            for k, v in weights.items()
+        ])
+
+        write_tab(sh, WEIGHTS_TAB, df_new)
         st.success("sauvegardé ✅")
 
 # Poids effectifs pour les graphes (focus si activé)
