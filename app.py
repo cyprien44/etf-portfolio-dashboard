@@ -788,6 +788,8 @@ with st.expander("debug"):
 #OPTIMISATION------------------------------------------------------------------------------------------------------------
 st.markdown("---")
 st.subheader("optimisation – maximiser le nombre effectif de pays")
+if "opt_result" not in st.session_state:
+    st.session_state["opt_result"] = None
 
 if not focus_isin:
     if st.button("Optimiser N_eff (pays)", type="primary"):
@@ -836,16 +838,35 @@ if not focus_isin:
                     "poids actuel": [weights[i] for i in isins_opt],
                     "poids optimal": w_opt,
                 })
+                 st.session_state["opt_result"] = {
+                    "success": True,
+                    "neff_before": float(neff_before),
+                    "neff_after": float(neff_after),
+                    "df_out": df_out,
+                }
+opt = st.session_state.get("opt_result")
+if opt:
+    if not opt["success"]:
+        st.error(f"Optimisation échouée : {opt['message']}")
+    else:
+        st.write(f"**N_eff actuel** : {opt['neff_before']:.2f}")
+        st.write(f"**N_eff optimal** : {opt['neff_after']:.2f}")
 
-                st.dataframe(
-                    df_out.assign(
-                        **{
-                            "poids actuel": df_out["poids actuel"].map(lambda x: f"{x:.2%}"),
-                            "poids optimal": df_out["poids optimal"].map(lambda x: f"{x:.2%}"),
-                        }
-                    ),
-                    use_container_width=True
-                )
+        df_show = opt["df_out"].copy()
+        st.dataframe(
+            df_show.assign(
+                **{
+                    "poids actuel": df_show["poids actuel"].map(lambda x: f"{x:.2%}"),
+                    "poids optimal": df_show["poids optimal"].map(lambda x: f"{x:.2%}"),
+                }
+            ),
+            use_container_width=True
+        )
+
+        if st.button("Effacer le résultat d'optimisation"):
+            st.session_state["opt_result"] = None
+
+
 else:
     st.info("Désactive le mode 100 % (focus) pour lancer l’optimisation.")
 
