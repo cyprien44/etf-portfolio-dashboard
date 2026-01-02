@@ -549,7 +549,7 @@ if not df_user_w.empty:
 
 # Weight sliders
 with st.sidebar:
-    st.subheader("poids du portefeuille")
+    st.subheader("Poids du portefeuille")
     weights_raw = {}
 
     default_equal = 1.0 / len(isins) if len(isins) else 0.0
@@ -562,23 +562,23 @@ with st.sidebar:
 
     # --- Mode focus 100% (graphes uniquement, sliders inchangés) ---
     st.markdown("---")
-    st.caption("mode focus (graphes uniquement)")
+    st.caption("Mode focus (graphes uniquement)")
 
     focus_options = ["(aucun)"] + [f"{name_map.get(i,'')} — {i}" for i in isins]
-    focus_choice = st.selectbox("afficher 100% sur :", focus_options, index=0)
+    focus_choice = st.selectbox("Afficher 100% sur :", focus_options, index=0)
 
     focus_isin = None
     if focus_choice != "(aucun)":
         focus_isin = focus_choice.split(" — ")[-1].strip()
 
 
-    st.caption("poids normalisés (référence)")
+    st.caption("Poids normalisés (référence)")
     for isin, w in sorted(weights.items(), key=lambda kv: kv[1], reverse=True):
         st.write(f"**{name_map.get(isin, '')}** — `{isin}` : **{w:.1%}**")
 
-    st.caption(f"somme normalisée = {sum(weights.values()):.2f}")
+    st.caption(f"Somme normalisée = {sum(weights.values()):.2f}")
 
-    if st.button("save weights"):
+    if st.button("Save weights"):
         df_keep = (
             df_weights_all[df_weights_all["user"].astype(str).str.lower() != user].copy()
             if not df_weights_all.empty
@@ -626,7 +626,7 @@ stocks_unique_est = estimate_stocks_unique(
 
 
 if "focus_isin" in locals() and focus_isin:
-    st.info(f"mode focus actif : **{name_map.get(focus_isin,'')}** ({focus_isin}) → graphes à 100% sur cet ETF")
+    st.info(f"Mode focus actif : **{name_map.get(focus_isin,'')}** ({focus_isin}) → graphes à 100% sur cet ETF")
 
 # Aggregate
 df_sector = aggregate(expos_by_isin, weights_effective, "sector")
@@ -636,7 +636,7 @@ df_ctry = aggregate(expos_by_isin, weights_effective, "country")
 countries_effective = effective_count_from_exposure(df_ctry, col="exposure")
 countries_unique = unique_count_from_exposure(df_ctry, label_col="label", col="exposure")
 
-st.markdown("### résumé du portefeuille")
+st.markdown("### Résumé du portefeuille")
 
 r1c1, r1c2 = st.columns(2)
 with r1c1:
@@ -678,7 +678,7 @@ if not missing.empty:
     st.dataframe(missing[["label","exposure"]].sort_values("exposure", ascending=False), use_container_width=True)
     
 # Map
-st.subheader("carte — exposition pays")
+st.subheader("Carte — exposition pays")
 df_map = df_ctry.copy()
 df_map["iso3"] = df_map["label"].map(country_to_iso3)
 df_map = df_map.dropna(subset=["iso3"])
