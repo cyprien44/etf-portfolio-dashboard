@@ -436,6 +436,18 @@ def unique_count_from_exposure(df: pd.DataFrame, label_col: str = "label", col: 
     d = d[(d[col] > 0) & (~d[label_col].str.lower().isin(["autres", "others", "autre"]))]
     return int(d[label_col].nunique())
 
+def neff_objective(w, isins, expos_by_isin, w0=None, lam=0.1):
+    weights_tmp = normalize_weights(dict(zip(isins, w)))
+    df_ctry_tmp = aggregate(expos_by_isin, weights_tmp, "country")
+    neff = effective_count_from_exposure(df_ctry_tmp)
+
+    penalty = 0.0
+    if w0 is not None:
+        penalty = lam * np.sum((w - w0) ** 2)
+
+    return -(neff - penalty)
+
+
 
 # -----------------------------
 # UI
@@ -708,3 +720,68 @@ with st.expander("debug"):
     st.write("countries", df_ctry)
     st.write("currencies", df_curr)
     st.write("sectors", df_sector)
+
+#OPTIMISATION------------------------------------------------------------------------------------------------------------
+st.markdown("---")
+st.subheader("optimisation – maximiser le nombre effectif de pays")
+
+if not focus_isin:
+    if st.button("Optimiser N_eff (pays)", type="primary"):
+        import numpy as np
+        from scipy.optimize import minimize
+
+        isins_opt = [i for i, w in weights.items() if w > 0]
+
+        if len(isins_opt) < 2:
+            st.warning("Il faut au moins 2 ETFs actifs.")
+        else:
+            x0 = np.array([weights[i] for i in isins_opt])
+            x0 = x0 / x0.sum()
+
+            bounds = [(0.0, 1.0)] * len(isins_opt)
+            cons = {"type": "eq", "fun": lambda w: np.sum(w) - 1.0}
+
+            res = minimize(
+                neff_objective,
+                x0=x0,
+                args=(isins_opt, expos_by_isin),
+                method="SLSQP",
+                bounds=bounds,
+                constraints=[cons],
+                options={"maxiter": 300},
+            )
+
+            if not res.success:
+                st.error(f"Optimisation échouée : {res.message}")
+            else:
+                w_opt = res.x
+                weights_opt = dict(zip(isins_opt, w_opt))
+
+                # comparaison
+                df_before = aggregate(expos_by_isin, weights, "country")
+                df_after  = aggregate(expos_by_isin, weights_opt, "country")
+
+                neff_before = effective_count_from_exposure(df_before)
+                neff_after  = effective_count_from_exposure(df_after)
+
+                st.write(f"**N_eff actuel** : {neff_before:.2f}")
+                st.write(f"**N_eff optimal** : {neff_after:.2f}")
+
+                df_out = pd.DataFrame({
+                    "ETF": [name_map.get(i, i) for i in isins_opt],
+                    "poids actuel": [weights[i] for i in isins_opt],
+                    "poids optimal": w_opt,
+                })
+
+                st.dataframe(
+                    df_out.assign(
+                        **{
+                            "poids actuel": df_out["poids actuel"].map(lambda x: f"{x:.2%}"),
+                            "poids optimal": df_out["poids optimal"].map(lambda x: f"{x:.2%}"),
+                        }
+                    ),
+                    use_container_width=True
+                )
+else:
+    st.info("Désactive le mode 100 % (focus) pour lancer l’optimisation.")
+
