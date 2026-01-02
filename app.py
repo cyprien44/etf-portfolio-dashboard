@@ -841,6 +841,7 @@ if not focus_isin:
                     "neff_before": float(neff_before),
                     "neff_after": float(neff_after),
                     "df_out": df_out,
+                    "weights_opt": weights_opt,   # ✅ AJOUT
                 }
 
     # affichage persistant du dernier résultat
@@ -862,10 +863,41 @@ if not focus_isin:
                 ),
                 use_container_width=True
             )
+            if st.button("Sauver ce portefeuille comme 'opti'"):
+                # 1) on récupère les poids optimaux
+                weights_opt = opt.get("weights_opt", None)
+                if not weights_opt:
+                    st.error("Pas de poids optimaux disponibles (relance l’optimisation).")
+                else:
+                    # 2) on supprime l'ancien portefeuille 'opti' du sheet
+                    df_keep = (
+                        df_weights_all[df_weights_all["user"].astype(str).str.lower() != "opti"].copy()
+                        if not df_weights_all.empty
+                        else pd.DataFrame(columns=["user", "isin", "weight"])
+                    )
+            
+                    # 3) on crée les nouvelles lignes 'opti'
+                    df_new = pd.DataFrame([
+                        {
+                            "user": "opti",
+                            "isin": isin,
+                            "etf_name": name_map.get(isin, ""),
+                            "weight": float(w),
+                        }
+                        for isin, w in weights_opt.items()
+                    ])
+            
+                    # 4) concat + nettoyage (anti NaN/Inf) + write
+                    df_out_all = pd.concat([df_keep, df_new], ignore_index=True)
+                    df_out_all = df_out_all.replace([float("inf"), float("-inf")], None)
+                    df_out_all = df_out_all.where(pd.notna(df_out_all), None)
+            
+                    write_tab(sh, WEIGHTS_TAB, df_out_all)
+                    st.success("Portefeuille 'opti' sauvegardé ✅ (weights_users)")
 
             if st.button("Effacer le résultat d'optimisation"):
                 st.session_state["opt_result"] = None
-
+        
 else:
     st.info("Désactive le mode 100 % (focus) pour lancer l’optimisation.")
 
