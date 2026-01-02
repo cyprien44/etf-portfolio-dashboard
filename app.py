@@ -779,12 +779,6 @@ else:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-with st.expander("debug"):
-    st.write("weights (normalisés)", pd.DataFrame([{"isin": k, "weight": v} for k, v in weights.items()]))
-    st.write("countries", df_ctry)
-    st.write("currencies", df_curr)
-    st.write("sectors", df_sector)
-
 # OPTIMISATION------------------------------------------------------------------------------------------------------------
 st.markdown("---")
 st.subheader("optimisation – maximiser le nombre effectif de pays")
@@ -875,4 +869,10 @@ if not focus_isin:
 else:
     st.info("Désactive le mode 100 % (focus) pour lancer l’optimisation.")
 
+
+with st.expander("debug"):
+    st.write("weights (normalisés)", pd.DataFrame([{"isin": k, "weight": v} for k, v in weights.items()]))
+    st.write("countries", df_ctry)
+    st.write("currencies", df_curr)
+    st.write("sectors", df_sector)
 
