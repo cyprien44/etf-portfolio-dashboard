@@ -785,9 +785,10 @@ with st.expander("debug"):
     st.write("currencies", df_curr)
     st.write("sectors", df_sector)
 
-#OPTIMISATION------------------------------------------------------------------------------------------------------------
+# OPTIMISATION------------------------------------------------------------------------------------------------------------
 st.markdown("---")
 st.subheader("optimisation – maximiser le nombre effectif de pays")
+
 if "opt_result" not in st.session_state:
     st.session_state["opt_result"] = None
 
@@ -799,7 +800,10 @@ if not focus_isin:
         isins_opt = [i for i, w in weights.items() if w > 0]
 
         if len(isins_opt) < 2:
-            st.warning("Il faut au moins 2 ETFs actifs.")
+            st.session_state["opt_result"] = {
+                "success": False,
+                "message": "Il faut au moins 2 ETFs actifs."
+            }
         else:
             x0 = np.array([weights[i] for i in isins_opt])
             x0 = x0 / x0.sum()
@@ -818,55 +822,57 @@ if not focus_isin:
             )
 
             if not res.success:
-                st.error(f"Optimisation échouée : {res.message}")
+                st.session_state["opt_result"] = {
+                    "success": False,
+                    "message": res.message
+                }
             else:
                 w_opt = res.x
                 weights_opt = dict(zip(isins_opt, w_opt))
 
-                # comparaison
                 df_before = aggregate(expos_by_isin, weights, "country")
                 df_after  = aggregate(expos_by_isin, weights_opt, "country")
 
                 neff_before = effective_count_from_exposure(df_before)
                 neff_after  = effective_count_from_exposure(df_after)
 
-                st.write(f"**N_eff actuel** : {neff_before:.2f}")
-                st.write(f"**N_eff optimal** : {neff_after:.2f}")
-
                 df_out = pd.DataFrame({
                     "ETF": [name_map.get(i, i) for i in isins_opt],
                     "poids actuel": [weights[i] for i in isins_opt],
                     "poids optimal": w_opt,
                 })
-                 st.session_state["opt_result"] = {
+
+                st.session_state["opt_result"] = {
                     "success": True,
                     "neff_before": float(neff_before),
                     "neff_after": float(neff_after),
                     "df_out": df_out,
                 }
-opt = st.session_state.get("opt_result")
-if opt:
-    if not opt["success"]:
-        st.error(f"Optimisation échouée : {opt['message']}")
-    else:
-        st.write(f"**N_eff actuel** : {opt['neff_before']:.2f}")
-        st.write(f"**N_eff optimal** : {opt['neff_after']:.2f}")
 
-        df_show = opt["df_out"].copy()
-        st.dataframe(
-            df_show.assign(
-                **{
-                    "poids actuel": df_show["poids actuel"].map(lambda x: f"{x:.2%}"),
-                    "poids optimal": df_show["poids optimal"].map(lambda x: f"{x:.2%}"),
-                }
-            ),
-            use_container_width=True
-        )
+    # affichage persistant du dernier résultat
+    opt = st.session_state.get("opt_result")
+    if opt:
+        if not opt["success"]:
+            st.error(f"Optimisation échouée : {opt['message']}")
+        else:
+            st.write(f"**N_eff actuel** : {opt['neff_before']:.2f}")
+            st.write(f"**N_eff optimal** : {opt['neff_after']:.2f}")
 
-        if st.button("Effacer le résultat d'optimisation"):
-            st.session_state["opt_result"] = None
+            df_show = opt["df_out"].copy()
+            st.dataframe(
+                df_show.assign(
+                    **{
+                        "poids actuel": df_show["poids actuel"].map(lambda x: f"{x:.2%}"),
+                        "poids optimal": df_show["poids optimal"].map(lambda x: f"{x:.2%}"),
+                    }
+                ),
+                use_container_width=True
+            )
 
+            if st.button("Effacer le résultat d'optimisation"):
+                st.session_state["opt_result"] = None
 
 else:
     st.info("Désactive le mode 100 % (focus) pour lancer l’optimisation.")
+
 
