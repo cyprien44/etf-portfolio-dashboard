@@ -358,7 +358,7 @@ with st.sidebar:
         options=sorted(users),
         index=users.index("cyprien") if "cyprien" in users else 0,
     )
-    top_n = st.slider("top N", 5, 70, 20)
+    top_n = st.slider("top N", 5, 70, 30)
     if st.button("recharger les excels"):
         # Clear caches (download + parsing) if you updated files in Drive
         st.cache_data.clear()
