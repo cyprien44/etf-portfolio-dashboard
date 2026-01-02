@@ -621,7 +621,7 @@ with m1:
     st.metric("TER moyen (pondéré)", f"{ter_weighted:.2%}")
 
 with m2:
-    st.metric("actions (univers)", f"{stocks_universe:,}".replace(",", " "))
+    st.metric("actions (univers)", f"{stocks_universe:,.0f}".replace(",", " "))
 
 with m3:
     st.metric("actions uniques (estim.)", f"{stocks_unique_est:,.0f}".replace(",", " "))
