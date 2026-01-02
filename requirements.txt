@@ -6,3 +6,4 @@ pycountry
 gspread
 google-auth
 requests
+scipy
