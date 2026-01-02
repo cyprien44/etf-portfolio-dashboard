@@ -133,10 +133,18 @@ def read_tab(sh, tab_name: str) -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
+from gspread.exceptions import APIError
+
 def write_tab(sh, tab_name: str, df: pd.DataFrame) -> None:
     ws = sh.worksheet(tab_name)
-    ws.clear()
-    ws.update([df.columns.tolist()] + df.astype(object).values.tolist())
+    try:
+        ws.clear()
+        ws.update([df.columns.tolist()] + df.astype(object).values.tolist())
+    except APIError as e:
+        st.error("Erreur Google Sheets lors de l'écriture.")
+        st.code(str(e), language="text")  # <-- te montre le vrai code 403/429/etc
+        raise
+
 
 
 # -----------------------------
