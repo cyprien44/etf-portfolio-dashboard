@@ -418,7 +418,23 @@ def estimate_stocks_unique(meta_by_isin, weights, etf_bucket, overlap):
 
     return max(total - overlap_penalty, 0)
 
+def effective_count_from_exposure(df: pd.DataFrame, col: str = "exposure") -> float:
+    """N_eff = 1 / sum(w_i^2) sur une distribution de poids."""
+    if df is None or df.empty or col not in df.columns:
+        return 0.0
+    w = df[col].astype(float).values
+    s2 = (w ** 2).sum()
+    return (1.0 / s2) if s2 > 0 else 0.0
 
+
+def unique_count_from_exposure(df: pd.DataFrame, label_col: str = "label", col: str = "exposure") -> int:
+    """Nombre de labels avec exposition > 0 (en excluant Autres)."""
+    if df is None or df.empty:
+        return 0
+    d = df.copy()
+    d[label_col] = d[label_col].astype(str)
+    d = d[(d[col] > 0) & (~d[label_col].str.lower().isin(["autres", "others", "autre"]))]
+    return int(d[label_col].nunique())
 
 
 # -----------------------------
@@ -578,10 +594,13 @@ if "focus_isin" in locals() and focus_isin in isins:
     weights_effective = {i: (1.0 if i == focus_isin else 0.0) for i in isins}
 else:
     weights_effective = weights
-# TER
+
+# --- stats calculées sur weights_effective (donc focus inclus) ---
+
+# TER pondéré (focus-aware)
 w_ter = 0.0
 w_sum = 0.0
-for isin, w in weights.items():  # <- IMPORTANT: weights (normaux), pas weights_effective
+for isin, w in weights_effective.items():
     ter = meta_by_isin.get(isin, {}).get("TER")
     if ter is None or pd.isna(ter) or w <= 0:
         continue
@@ -590,16 +609,17 @@ for isin, w in weights.items():  # <- IMPORTANT: weights (normaux), pas weights_
 
 ter_weighted = (w_ter / w_sum) if w_sum > 0 else None
 
+# Actions (focus-aware)
 stocks_universe = estimate_stocks_universe(
     meta_by_isin=meta_by_isin,
-    weights=weights,          # poids normaux
+    weights=weights_effective,     # <-- IMPORTANT
     etf_bucket=ETF_BUCKET,
     overlap=OVERLAP,
 )
 
 stocks_unique_est = estimate_stocks_unique(
     meta_by_isin=meta_by_isin,
-    weights=weights,          # utilisé seulement pour détecter w>0 (binaire)
+    weights=weights_effective,     # <-- IMPORTANT (sert à détecter w>0)
     etf_bucket=ETF_BUCKET,
     overlap=OVERLAP,
 )
@@ -613,18 +633,29 @@ df_sector = aggregate(expos_by_isin, weights_effective, "sector")
 df_curr = aggregate(expos_by_isin, weights_effective, "currency")
 df_ctry = aggregate(expos_by_isin, weights_effective, "country")
 
+countries_effective = effective_count_from_exposure(df_ctry, col="exposure")
+countries_unique = unique_count_from_exposure(df_ctry, label_col="label", col="exposure")
+
 st.markdown("### résumé du portefeuille")
 
-#Stats
-m1, m2, m3 = st.columns(3)
-with m1:
-    st.metric("TER moyen (pondéré)", f"{ter_weighted:.2%}")
+r1c1, r1c2 = st.columns(2)
+with r1c1:
+    st.metric("TER moyen (pondéré)", f"{ter_weighted:.2%}" if ter_weighted is not None else "n/a")
+with r1c2:
+    st.metric("", "")  # vide (ou tu peux mettre autre chose plus tard)
 
-with m2:
-    st.metric("actions (univers)", f"{stocks_universe:,.0f}".replace(",", " "))
+r2c1, r2c2 = st.columns(2)
+with r2c1:
+    st.metric("Nombre d'actions pondérées (estim.)", f"{stocks_universe:,.0f}".replace(",", " "))
+with r2c2:
+    st.metric("Nombre d'actions uniques (estim.)", f"{stocks_unique_est:,.0f}".replace(",", " "))
 
-with m3:
-    st.metric("Nombre d'actions total", f"{stocks_unique_est:,.0f}".replace(",", " "))
+r3c1, r3c2 = st.columns(2)
+with r3c1:
+    st.metric("Nombre de pays pondérés (N_eff)", f"{countries_effective:.2f}")
+with r3c2:
+    st.metric("Nombre de pays uniques", f"{countries_unique:d}")
+
 
 # Charts
 c1, c2, c3 = st.columns(3)
