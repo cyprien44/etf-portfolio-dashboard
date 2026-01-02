@@ -522,7 +522,7 @@ users = (
     .str.strip()
     .str.lower()
     .unique()
-    .tolist()[::-1]
+    .tolist() #[::-1]
 )
 
 # fallback sécurité
