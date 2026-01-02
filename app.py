@@ -340,6 +340,27 @@ def country_to_iso3(label: str):
 # -----------------------------
 # Portfolio math
 # -----------------------------
+
+def parse_weight(x) -> float:
+    """Accepte 0.20, 0,20, '20', '20,0' et renvoie un float en [0..1] si possible."""
+    if x is None or (isinstance(x, float) and pd.isna(x)):
+        return 0.0
+
+    s = str(x).strip()
+    if not s:
+        return 0.0
+
+    # enlève espaces / nbsp, puis virgule -> point
+    s = s.replace("\u00a0", "").replace(" ", "").replace(",", ".")
+
+    try:
+        v = float(s)
+    except Exception:
+        return 0.0
+
+    return v
+
+
 def normalize_weights(w: Dict[str, float]) -> Dict[str, float]:
     total = sum(max(0.0, float(v)) for v in w.values())
     if total <= 0:
@@ -580,10 +601,8 @@ df_user_w = df_weights_all[df_weights_all["user"].astype(str).str.lower() == use
 w_map = {}
 if not df_user_w.empty:
     for _, rr in df_user_w.iterrows():
-        try:
-            w_map[str(rr["isin"]).strip()] = float(rr["weight"])
-        except Exception:
-            pass
+        isin = str(rr["isin"]).strip()
+        w_map[isin] = parse_weight(rr.get("weight", 0.0))
 
 # Weight sliders
 with st.sidebar:
