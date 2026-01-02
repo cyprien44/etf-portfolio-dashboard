@@ -134,18 +134,36 @@ def read_tab(sh, tab_name: str) -> pd.DataFrame:
 
 
 from gspread.exceptions import APIError
+import time
 
 def write_tab(sh, tab_name: str, df: pd.DataFrame) -> None:
     ws = sh.worksheet(tab_name)
-    try:
-        ws.clear()
-        ws.update([df.columns.tolist()] + df.astype(object).values.tolist())
-    except APIError as e:
-        st.error("Erreur Google Sheets lors de l'écriture.")
-        st.code(str(e), language="text")  # <-- te montre le vrai code 403/429/etc
-        raise
 
+    values = [df.columns.tolist()] + df.astype(object).values.tolist()
+    if not values:
+        values = [["user", "isin", "weight"]]
 
+    nrows = len(values)
+    ncols = len(values[0])
+
+    # A1 range (ok tant que <= 26 colonnes)
+    end_col = chr(ord("A") + ncols - 1)
+    rng = f"A1:{end_col}{nrows}"
+
+    # retry light (quota / 5xx)
+    for k in range(3):
+        try:
+            ws.update(rng, values)
+            return
+        except APIError as e:
+            if k < 2:
+                time.sleep(1.5 * (k + 1))
+                continue
+            # on affiche au lieu de re-crasher
+            st.error("Erreur Google Sheets lors de l'écriture (update).")
+            st.write("HTTP status:", getattr(e.response, "status_code", None))
+            st.code(getattr(e.response, "text", str(e)), language="text")
+            return
 
 # -----------------------------
 # Drive links → direct download
