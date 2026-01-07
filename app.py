@@ -700,7 +700,15 @@ with st.sidebar:
 
     for isin in isins:
         etf_name = name_map.get(isin, isin)  # fallback = ISIN si pas trouvé
-        weights_raw[isin] = st.slider(etf_name, 0.0, 1.0, float(w_map.get(isin, default_equal)), 0.01)
+        k = f"w_{user}_{isin}"  # key unique par user+ETF
+        weights_raw[isin] = st.slider(
+            etf_name,
+            0.0, 1.0,
+            float(w_map.get(isin, default_equal)),
+            0.01,
+            key=k
+        )
+
 
     weights = normalize_weights(weights_raw)
 
