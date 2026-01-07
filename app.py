@@ -394,6 +394,13 @@ def country_to_iso3(label: str):
 # Portfolio math
 # -----------------------------
 
+def fmt_pct(w: float) -> str:
+    # écrit "17.66%" (parse_weight sait lire %)
+    try:
+        return f"{100.0 * float(w):.2f}%"
+    except Exception:
+        return "0.00%"
+
 def parse_weight(x) -> float:
     """Accepte 0.2 / 0,2 / '20%' / '20,00%' / 20 (si % oublié) -> renvoie 0..1."""
     if x is None or (isinstance(x, float) and pd.isna(x)):
@@ -743,7 +750,7 @@ with st.sidebar:
         # boucle simple et robuste
         for isin, w in weights.items():
             if isin in idx:
-                df_out.loc[df_out["isin"] == isin, user] = float(w)
+                df_out.loc[df_out["isin"] == isin, user] = fmt_pct(w)
     
         # anti NaN/Inf
         df_out = df_out.replace([float("inf"), float("-inf")], None)
@@ -870,13 +877,6 @@ else:
 # OPTIMISATION------------------------------------------------------------------------------------------------------------
 st.markdown("---")
 st.subheader("optimisation – maximiser le nombre effectif de pays")
-
-def fmt_pct(w: float) -> str:
-    # écrit "17.66%" (parse_weight sait lire %)
-    try:
-        return f"{100.0 * float(w):.2f}%"
-    except Exception:
-        return "0.00%"
 
 
 if "opt_result" not in st.session_state:
