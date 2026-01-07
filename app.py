@@ -16,7 +16,7 @@ from google.oauth2.service_account import Credentials
 # Constants
 # -----------------------------
 FILES_TAB = "files_link"
-WEIGHTS_TAB = "weights_users"
+WEIGHTS_TAB = "Weights_by_users"
 
 TAB_COUNTRY = "Répartition par pays"
 TAB_CURRENCY = "Répartition par devise"
@@ -564,24 +564,27 @@ gc = get_gspread_client()
 sh = open_sheet(gc)
 
 df_files = read_tab(sh, FILES_TAB)
-df_weights_all = read_tab(sh, WEIGHTS_TAB) if WEIGHTS_TAB in [w.title for w in sh.worksheets()] else pd.DataFrame(
-    columns=["user", "isin", "weight"]
-)
-# Liste des users uniques (nettoyée)
-users = (
-    df_weights_all["user"]
-    .dropna()
-    .astype(str)
-    .str.strip()
-    .str.lower()
-    .unique()
-    .tolist()
-)
+df_weights_wide = read_tab(sh, WEIGHTS_TAB) if WEIGHTS_TAB in [w.title for w in sh.worksheets()] else pd.DataFrame()
+
+if df_weights_wide.empty:
+    st.error(f"Onglet `{WEIGHTS_TAB}` vide ou introuvable.")
+    st.stop()
+
+required_wide = {"isin", "etf_name"}
+missing_wide = required_wide - set(df_weights_wide.columns)
+if missing_wide:
+    st.error(f"Onglet `{WEIGHTS_TAB}` mauvais format: colonnes manquantes {sorted(missing_wide)}. "
+             f"Attendu: isin, etf_name, puis colonnes users.")
+    st.stop()
+
+# Users = colonnes à partir de la 3e
+user_cols = list(df_weights_wide.columns[2:])  # 👈 Alexia, Cyprien, Optimisation, etc.
+users = [u.strip() for u in user_cols if str(u).strip()]
 
 # fallback sécurité
 if not users:
-    users = ["cyprien"]
-
+    users = ["Cyprien"]
+    
 # Validate files_link
 required = {"isin", "etf_name", "excel_url", "active", "Stocks number", "TER"}
 missing = required - set(df_files.columns)
@@ -631,11 +634,13 @@ if df_active.empty:
 # Sidebar controls
 with st.sidebar:
     st.header("paramètres")
-    user = st.selectbox(
-        "utilisateur",
-        options=sorted(users),
-        index=users.index("cyprien") if "cyprien" in users else 0,
-    )
+    def _find_default_user(users_list: list[str]) -> int:
+        # essaye de tomber sur "Cyprien" sans être sensible à la casse
+        low = [u.lower() for u in users_list]
+        return low.index("cyprien") if "cyprien" in low else 0
+    
+    user = st.selectbox("utilisateur", options=users, index=_find_default_user(users),)
+
     top_n = st.slider("top N", 5, 70, 30)
     if st.button("recharger les excels"):
         # Clear caches (download + parsing) if you updated files in Drive
@@ -672,13 +677,19 @@ meta_by_isin = (
     .to_dict(orient="index")
 )
 
-# Load user weights
-df_user_w = df_weights_all[df_weights_all["user"].astype(str).str.lower() == user].copy() if not df_weights_all.empty else pd.DataFrame()
+# Map des poids pour le user sélectionné
 w_map = {}
-if not df_user_w.empty:
-    for _, rr in df_user_w.iterrows():
-        isin = str(rr["isin"]).strip()
-        w_map[isin] = parse_weight(rr.get("weight", 0.0))
+
+df_w = df_weights_wide.copy()
+df_w["isin"] = df_w["isin"].astype(str).str.strip()
+df_w = df_w.set_index("isin")
+
+if user in df_w.columns:
+    for isin in df_w.index:
+        w_map[isin] = parse_weight(df_w.at[isin, user])
+else:
+    st.warning(f"Colonne user introuvable dans `{WEIGHTS_TAB}` : {user}")
+
 
 # Weight sliders
 with st.sidebar:
@@ -712,29 +723,27 @@ with st.sidebar:
     st.caption(f"Somme normalisée = {sum(weights.values()):.2f}")
 
     if st.button("Save weights"):
-        df_keep = (
-            df_weights_all[df_weights_all["user"].astype(str).str.lower() != user].copy()
-            if not df_weights_all.empty
-            else pd.DataFrame(columns=["user", "isin", "weight"])
-        )
-        df_new = pd.DataFrame([
-            {
-                "user": user,
-                "isin": k,
-                "etf_name": name_map.get(k, ""), 
-                "weight": float(v),
-            }
-            for k, v in weights.items()
-        ])
-        df_out = pd.concat([df_keep, df_new], ignore_index=True)
-
-        # ✅ anti-NaN / anti-Inf (obligatoire pour JSON)
+        df_out = df_weights_wide.copy()
+        df_out["isin"] = df_out["isin"].astype(str).str.strip()
+    
+        # assure que le user existe comme colonne
+        if user not in df_out.columns:
+            df_out[user] = None
+    
+        # on écrit les poids (fractions 0..1) sur les lignes matching ISIN
+        idx = df_out.set_index("isin").index
+        # boucle simple et robuste
+        for isin, w in weights.items():
+            if isin in idx:
+                df_out.loc[df_out["isin"] == isin, user] = float(w)
+    
+        # anti NaN/Inf
         df_out = df_out.replace([float("inf"), float("-inf")], None)
         df_out = df_out.where(pd.notna(df_out), None)
-        
+    
         write_tab(sh, WEIGHTS_TAB, df_out)
-        
         st.success("sauvegardé ✅")
+
 
 # Poids effectifs pour les graphes (focus si activé)
 if "focus_isin" in locals() and focus_isin in isins:
@@ -935,36 +944,28 @@ if not focus_isin:
                 use_container_width=True
             )
             if st.button("Sauver ce portefeuille comme 'opti'"):
-                # 1) on récupère les poids optimaux
                 weights_opt = opt.get("weights_opt", None)
                 if not weights_opt:
                     st.error("Pas de poids optimaux disponibles (relance l’optimisation).")
                 else:
-                    # 2) on supprime l'ancien portefeuille 'opti' du sheet
-                    df_keep = (
-                        df_weights_all[df_weights_all["user"].astype(str).str.lower() != "opti"].copy()
-                        if not df_weights_all.empty
-                        else pd.DataFrame(columns=["user", "isin", "weight"])
-                    )
+                    df_out = df_weights_wide.copy()
+                    df_out["isin"] = df_out["isin"].astype(str).str.strip()
             
-                    # 3) on crée les nouvelles lignes 'opti'
-                    df_new = pd.DataFrame([
-                        {
-                            "user": "opti",
-                            "isin": isin,
-                            "etf_name": name_map.get(isin, ""),
-                            "weight": float(w),
-                        }
-                        for isin, w in weights_opt.items()
-                    ])
+                    # colonne cible : "Optimisation" si elle existe, sinon "opti"
+                    target_col = "Optimisation" if "Optimisation" in df_out.columns else "opti"
+                    if target_col not in df_out.columns:
+                        df_out[target_col] = None
             
-                    # 4) concat + nettoyage (anti NaN/Inf) + write
-                    df_out_all = pd.concat([df_keep, df_new], ignore_index=True)
-                    df_out_all = df_out_all.replace([float("inf"), float("-inf")], None)
-                    df_out_all = df_out_all.where(pd.notna(df_out_all), None)
+                    idx = df_out.set_index("isin").index
+                    for isin, w in weights_opt.items():
+                        if isin in idx:
+                            df_out.loc[df_out["isin"] == isin, target_col] = float(w)
             
-                    write_tab(sh, WEIGHTS_TAB, df_out_all)
-                    st.success("Portefeuille 'opti' sauvegardé ✅ (weights_users)")
+                    df_out = df_out.replace([float("inf"), float("-inf")], None)
+                    df_out = df_out.where(pd.notna(df_out), None)
+            
+                    write_tab(sh, WEIGHTS_TAB, df_out)
+                    st.success(f"Portefeuille '{target_col}' sauvegardé ✅ ({WEIGHTS_TAB})")
 
             if st.button("Effacer le résultat d'optimisation"):
                 st.session_state["opt_result"] = None
