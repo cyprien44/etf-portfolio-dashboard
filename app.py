@@ -871,6 +871,14 @@ else:
 st.markdown("---")
 st.subheader("optimisation – maximiser le nombre effectif de pays")
 
+def fmt_pct(w: float) -> str:
+    # écrit "17.66%" (parse_weight sait lire %)
+    try:
+        return f"{100.0 * float(w):.2f}%"
+    except Exception:
+        return "0.00%"
+
+
 if "opt_result" not in st.session_state:
     st.session_state["opt_result"] = None
 
@@ -959,7 +967,6 @@ if not focus_isin:
                     df_out = df_weights_wide.copy()
                     df_out["isin"] = df_out["isin"].astype(str).str.strip()
             
-                    # colonne cible : "Optimisation" si elle existe, sinon "opti"
                     target_col = "Optimisation" if "Optimisation" in df_out.columns else "opti"
                     if target_col not in df_out.columns:
                         df_out[target_col] = None
@@ -967,13 +974,14 @@ if not focus_isin:
                     idx = df_out.set_index("isin").index
                     for isin, w in weights_opt.items():
                         if isin in idx:
-                            df_out.loc[df_out["isin"] == isin, target_col] = float(w)
+                            df_out.loc[df_out["isin"] == isin, target_col] = fmt_pct(w)  # ✅ % string
             
                     df_out = df_out.replace([float("inf"), float("-inf")], None)
                     df_out = df_out.where(pd.notna(df_out), None)
             
                     write_tab(sh, WEIGHTS_TAB, df_out)
                     st.success(f"Portefeuille '{target_col}' sauvegardé ✅ ({WEIGHTS_TAB})")
+
 
             if st.button("Effacer le résultat d'optimisation"):
                 st.session_state["opt_result"] = None
