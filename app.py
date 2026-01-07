@@ -332,7 +332,8 @@ def read_overlap_matrix_pretty(sh, tab_name: str) -> pd.DataFrame:
 
     # 4) nettoyage colonnes (ISIN) + cast float
     df.columns = [str(c).strip() for c in df.columns]
-    #df = df.replace("", "0")
+    df.index = df.index.astype(str).str.strip()
+    df = df.loc[:, (df.columns != "")]
     df = df.replace(",", ".", regex=True)
     df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0)
 
@@ -595,33 +596,29 @@ df_active = df_files[df_files["active"].isin(["1", "true", "yes", "y"])].copy()
 
 
 
-
-
 #---overlap diversification number stocks between ETF
 OVERLAP_TAB = "overlap_matrix"
 df_overlap = read_overlap_matrix_pretty(sh, OVERLAP_TAB)
 
-st.markdown("### debug overlap_matrix")
-st.write("shape:", df_overlap.shape)
-st.write("index duplicated?", df_overlap.index.duplicated().any())
-st.write("columns duplicated?", pd.Index(df_overlap.columns).duplicated().any())
+# st.markdown("### debug overlap_matrix")
+# st.write("shape:", df_overlap.shape)
+# st.write("index duplicated?", df_overlap.index.duplicated().any())
+# st.write("columns duplicated?", pd.Index(df_overlap.columns).duplicated().any())
 
-if df_overlap.index.duplicated().any():
-    st.write("duplicated index values:", df_overlap.index[df_overlap.index.duplicated()].tolist())
+# if df_overlap.index.duplicated().any():
+#     st.write("duplicated index values:", df_overlap.index[df_overlap.index.duplicated()].tolist())
 
-if pd.Index(df_overlap.columns).duplicated().any():
-    cols = pd.Index(df_overlap.columns)
-    st.write("duplicated columns values:", cols[cols.duplicated()].tolist())
+# if pd.Index(df_overlap.columns).duplicated().any():
+#     cols = pd.Index(df_overlap.columns)
+#     st.write("duplicated columns values:", cols[cols.duplicated()].tolist())
 
-st.dataframe(df_overlap, use_container_width=True)
+# st.dataframe(df_overlap, use_container_width=True)
 
-# stop ici pour debugger tranquillement
-st.stop()
+# # stop ici pour debugger tranquillement
+# st.stop()
 
-# (TEMPORAIREMENT) commente ça pendant le debug
-# OVERLAP = overlap_df_to_dict_isin(df_overlap)
-
-
+# # (TEMPORAIREMENT) commente ça pendant le debug
+OVERLAP = overlap_df_to_dict_isin(df_overlap)
 
 
 
