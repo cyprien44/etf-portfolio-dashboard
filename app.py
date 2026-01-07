@@ -23,25 +23,25 @@ TAB_CURRENCY = "Répartition par devise"
 TAB_SECTOR = "Répartition par secteur"
 
 
-OVERLAP = {
-    # MSCI World
-    ("WORLD", "EUROPE"): 0.25,
-    ("WORLD", "EM"): 0.10,
-    ("WORLD", "ASIA"): 0.05,
-    ("WORLD", "LATAM"): 0.03,
+# OVERLAP = {
+#     # MSCI World
+#     ("WORLD", "EUROPE"): 0.25,
+#     ("WORLD", "EM"): 0.10,
+#     ("WORLD", "ASIA"): 0.05,
+#     ("WORLD", "LATAM"): 0.03,
 
-    # Europe
-    ("EUROPE", "EM"): 0.05,
-    ("EUROPE", "ASIA"): 0.00,
-    ("EUROPE", "LATAM"): 0.00,
+#     # Europe
+#     ("EUROPE", "EM"): 0.05,
+#     ("EUROPE", "ASIA"): 0.00,
+#     ("EUROPE", "LATAM"): 0.00,
 
-    # Emerging Markets
-    ("EM", "ASIA"): 0.55,
-    ("EM", "LATAM"): 0.05,
+#     # Emerging Markets
+#     ("EM", "ASIA"): 0.55,
+#     ("EM", "LATAM"): 0.05,
 
-    # Sub EM
-    ("ASIA", "LATAM"): 0.00,
-}
+#     # Sub EM
+#     ("ASIA", "LATAM"): 0.00,
+# }
 
 
 # -----------------------------
@@ -296,6 +296,63 @@ def read_exposures_from_excel(xlsx_bytes: bytes) -> Tuple[pd.DataFrame, pd.DataF
     return df_country, df_curr, df_sector
 
 
+def read_overlap_matrix_pretty(sh, tab_name: str) -> pd.DataFrame:
+    """
+    Format attendu (comme ta capture) :
+      - 2 premières lignes = titres
+      - Col A = noms ETF (à ignorer)
+      - Col B = 'isin' (index lignes)
+      - Ligne 3 = en-têtes ISIN en colonnes (C..)
+      - Bloc C4.. = valeurs overlap
+    Retourne un DataFrame : index=isin (lignes), colonnes=isin (colonnes)
+    """
+    ws = sh.worksheet(tab_name)
+    rows = ws.get_all_values()
+
+    if not rows or len(rows) < 4:
+        return pd.DataFrame()
+
+    # 1) on saute les 2 premières lignes
+    rows = rows[2:]  # now rows[0] is the header line (line 3 in sheet)
+
+    header = rows[0]          # line 3
+    data_rows = rows[1:]      # from line 4
+
+    # 2) on ignore col A (ETF name), on garde à partir de col B
+    header = header[1:]               # drop first col (A)
+    data_rows = [r[1:] for r in data_rows]  # drop first col (A)
+
+    df = pd.DataFrame(data_rows, columns=header)
+
+    # 3) la première colonne est "isin" (col B)
+    df = df.rename(columns={df.columns[0]: "isin"})
+    df["isin"] = df["isin"].astype(str).str.strip()
+    df = df.set_index("isin")
+
+    # 4) nettoyage colonnes (ISIN) + cast float
+    df.columns = [str(c).strip() for c in df.columns]
+    df = df.replace("", "0")
+    df = df.replace(",", ".", regex=True)
+    df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0)
+
+    return df
+
+
+def overlap_df_to_dict_isin(df_ov: pd.DataFrame) -> Dict[tuple, float]:
+    """
+    dict du style {(isin_i, isin_j): ov_ij}
+    """
+    ov = {}
+    if df_ov is None or df_ov.empty:
+        return ov
+
+    for i in df_ov.index:
+        for j in df_ov.columns:
+            ov[(i, j)] = float(df_ov.loc[i, j])
+    return ov
+
+
+
 def _norm(s: str) -> str:
     s = (s or "").strip()
     # enlève accents
@@ -533,7 +590,14 @@ if missing:
 df_files["active"] = df_files["active"].astype(str).str.lower()
 df_active = df_files[df_files["active"].isin(["1", "true", "yes", "y"])].copy()
 
-# --- Region -> ETF_BUCKET dynamique (évite de maintenir un dict à la main) ---
+
+#---overlap diversification number stocks between ETF
+OVERLAP_TAB = "overlap_matrix"
+df_overlap = read_overlap_matrix_pretty(sh, OVERLAP_TAB)
+OVERLAP = overlap_df_to_dict_isin(df_overlap)
+
+
+# --- Region -> ETF_BUCKET dynamique ---
 if "Region" in df_active.columns:
     ETF_BUCKET_DYNAMIC = (
         df_active.set_index("isin")["Region"]
@@ -544,8 +608,6 @@ if "Region" in df_active.columns:
     )
 else:
     ETF_BUCKET_DYNAMIC = {}  # fallback si colonne absente
-
-
 
 # Stocks number -> int
 df_active["Stocks number"] = pd.to_numeric(df_active["Stocks number"], errors="coerce")
@@ -563,6 +625,8 @@ df_active["TER"] = pd.to_numeric(df_active["TER"], errors="coerce")  / 100.0
 if df_active.empty:
     st.warning("Aucun ETF actif dans `files_link` (colonne active=1).")
     st.stop()
+
+
 
 # Sidebar controls
 with st.sidebar:
