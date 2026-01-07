@@ -574,7 +574,7 @@ users = (
     .str.strip()
     .str.lower()
     .unique()
-    .tolist() #[::-1]
+    .tolist()
 )
 
 # fallback sécurité
@@ -592,10 +592,38 @@ df_files["active"] = df_files["active"].astype(str).str.lower()
 df_active = df_files[df_files["active"].isin(["1", "true", "yes", "y"])].copy()
 
 
+
+
+
+
+
 #---overlap diversification number stocks between ETF
 OVERLAP_TAB = "overlap_matrix"
 df_overlap = read_overlap_matrix_pretty(sh, OVERLAP_TAB)
-OVERLAP = overlap_df_to_dict_isin(df_overlap)
+
+st.markdown("### debug overlap_matrix")
+st.write("shape:", df_overlap.shape)
+st.write("index duplicated?", df_overlap.index.duplicated().any())
+st.write("columns duplicated?", pd.Index(df_overlap.columns).duplicated().any())
+
+if df_overlap.index.duplicated().any():
+    st.write("duplicated index values:", df_overlap.index[df_overlap.index.duplicated()].tolist())
+
+if pd.Index(df_overlap.columns).duplicated().any():
+    cols = pd.Index(df_overlap.columns)
+    st.write("duplicated columns values:", cols[cols.duplicated()].tolist())
+
+st.dataframe(df_overlap, use_container_width=True)
+
+# stop ici pour debugger tranquillement
+st.stop()
+
+# (TEMPORAIREMENT) commente ça pendant le debug
+# OVERLAP = overlap_df_to_dict_isin(df_overlap)
+
+
+
+
 
 
 # --- Region -> ETF_BUCKET dynamique ---
