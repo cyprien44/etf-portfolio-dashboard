@@ -22,13 +22,6 @@ TAB_COUNTRY = "Répartition par pays"
 TAB_CURRENCY = "Répartition par devise"
 TAB_SECTOR = "Répartition par secteur"
 
-ETF_BUCKET = {
-    "IE0002XZSH01": "WORLD",    # iShares MSCI World Swap PEA
-    "FR0013412038": "EUROPE",   # Amundi PEA MSCI Europe
-    "FR0011869312": "ASIA",     # Amundi PEA Asie Pacifique
-    "FR0013412020": "EM",       # Amundi PEA MSCI Emerging Markets ESG
-    "FR0013412004": "LATAM",    # Amundi PEA MSCI Emerging Latin America
-}
 
 OVERLAP = {
     # MSCI World
@@ -540,6 +533,19 @@ if missing:
 df_files["active"] = df_files["active"].astype(str).str.lower()
 df_active = df_files[df_files["active"].isin(["1", "true", "yes", "y"])].copy()
 
+# --- Region -> ETF_BUCKET dynamique (évite de maintenir un dict à la main) ---
+if "Region" in df_active.columns:
+    ETF_BUCKET_DYNAMIC = (
+        df_active.set_index("isin")["Region"]
+        .astype(str)
+        .str.strip()
+        .str.upper()
+        .to_dict()
+    )
+else:
+    ETF_BUCKET_DYNAMIC = {}  # fallback si colonne absente
+
+
 
 # Stocks number -> int
 df_active["Stocks number"] = pd.to_numeric(df_active["Stocks number"], errors="coerce")
@@ -690,14 +696,14 @@ ter_weighted = (w_ter / w_sum) if w_sum > 0 else None
 stocks_universe = estimate_stocks_universe(
     meta_by_isin=meta_by_isin,
     weights=weights_effective,     # <-- IMPORTANT
-    etf_bucket=ETF_BUCKET,
+    etf_bucket=ETF_BUCKET_DYNAMIC,
     overlap=OVERLAP,
 )
 
 stocks_unique_est = estimate_stocks_unique(
     meta_by_isin=meta_by_isin,
     weights=weights_effective,     # <-- IMPORTANT (sert à détecter w>0)
-    etf_bucket=ETF_BUCKET,
+    etf_bucket=ETF_BUCKET_DYNAMIC,
     overlap=OVERLAP,
 )
 
