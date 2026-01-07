@@ -329,15 +329,12 @@ def read_overlap_matrix_pretty(sh, tab_name: str) -> pd.DataFrame:
     df["isin"] = df["isin"].astype(str).str.strip()
     df = df.set_index("isin")
 
-    st.dataframe(df)
 
     # 4) nettoyage colonnes (ISIN) + cast float
     df.columns = [str(c).strip() for c in df.columns]
     #df = df.replace("", "0")
     df = df.replace(",", ".", regex=True)
     df = df.apply(pd.to_numeric, errors="coerce").fillna(0.0)
-
-    st.dataframe(df)
 
     return df
 
