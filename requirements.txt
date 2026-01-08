@@ -1,6 +1,7 @@
 streamlit
 pandas
 openpyxl
+numpy
 plotly
 pycountry
 gspread
