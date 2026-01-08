@@ -661,9 +661,20 @@ with st.sidebar:
 
     top_n = st.slider("top N", 5, 70, 30)
     if st.button("recharger les excels"):
-        # Clear caches (download + parsing) if you updated files in Drive
+        # 1) clear caches (excels)
         st.cache_data.clear()
-        st.success("cache vidé. rafraîchis la page.")
+    
+        # 2) reset widget state des sliders (pour forcer à relire les poids du Sheet)
+        for isin in isins:
+            k = f"w_{user}_{isin}"
+            if k in st.session_state:
+                del st.session_state[k]
+    
+        # optionnel: reset aussi le focus selectbox si tu veux
+        # if "focus_choice" in st.session_state: del st.session_state["focus_choice"]
+    
+        st.success("cache vidé + sliders reset. rafraîchis…")
+        st.rerun()
 
 # Load & parse all active ETFs
 expos_by_isin: Dict[str, Dict[str, pd.DataFrame]] = {}
