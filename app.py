@@ -659,12 +659,30 @@ else:
 with st.sidebar:
     st.subheader("Poids du portefeuille")
     weights_raw = {}
-
     default_equal = 1.0 / len(isins) if len(isins) else 0.0
 
-    for isin in isins:
-        etf_name = name_map.get(isin, isin)  # fallback = ISIN si pas trouvé
-        k = f"w_{user}_{isin}"  # key unique par user+ETF
+    broker_map = (
+        df_active.set_index("isin")["Broker"]
+        .astype(str).str.strip()
+        .to_dict()
+    )
+
+    # séparation par broker (ordre Excel conservé)
+    isins_bourso = [
+        i for i in isins
+        if broker_map.get(i, "").lower().startswith("bours")
+    ]
+
+    isins_ibkr = [
+        i for i in isins
+        if "interactive" in broker_map.get(i, "").lower()
+    ]
+
+    # --- Boursorama ---
+    st.markdown("#### boursorama")
+    for isin in isins_bourso:
+        etf_name = name_map.get(isin, isin)
+        k = f"w_{user}_{isin}"
         weights_raw[isin] = st.slider(
             etf_name,
             0.0, 1.0,
@@ -673,8 +691,23 @@ with st.sidebar:
             key=k
         )
 
+    st.markdown("---")
+
+    # --- Interactive Broker ---
+    st.markdown("#### interactive broker")
+    for isin in isins_ibkr:
+        etf_name = name_map.get(isin, isin)
+        k = f"w_{user}_{isin}"
+        weights_raw[isin] = st.slider(
+            etf_name,
+            0.0, 1.0,
+            float(w_map.get(isin, default_equal)),
+            0.01,
+            key=k
+        )
 
     weights = normalize_weights(weights_raw)
+
 
     # --- Mode focus 100% (graphes uniquement, sliders inchangés) ---
     st.markdown("---")
