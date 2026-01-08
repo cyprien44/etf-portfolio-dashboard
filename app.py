@@ -3,6 +3,7 @@ import re
 from typing import Dict, Optional, Tuple, List
 
 import pandas as pd
+import numpy as np
 import requests
 import streamlit as st
 import plotly.express as px
@@ -551,16 +552,23 @@ def unique_count_from_exposure(df: pd.DataFrame, label_col: str = "label", col: 
     d = d[(d[col] > 0) & (~d[label_col].str.lower().isin(["autres", "others", "autre"]))]
     return int(d[label_col].nunique())
 
-def neff_objective(w, isins, expos_by_isin, w0=None, lam=0.1):
-    weights_tmp = normalize_weights(dict(zip(isins, w)))
+def neff_objective(w, isins, expos_by_isin, w0=None, lam=0.0, alpha=0.0):
+    weights_tmp = dict(zip(isins, w))
     df_ctry_tmp = aggregate(expos_by_isin, weights_tmp, "country")
     neff = effective_count_from_exposure(df_ctry_tmp)
 
     penalty = 0.0
-    if w0 is not None:
-        penalty = lam * np.sum((w - w0) ** 2)
+
+    # 1) rester proche du portefeuille actuel
+    if w0 is not None and lam > 0:
+        penalty += lam * np.sum((w - w0) ** 2)
+
+    # 2) pénaliser la concentration (favorise des poids plus équilibrés)
+    if alpha > 0:
+        penalty += alpha * np.sum(w ** 2)
 
     return -(neff - penalty)
+
 
 
 
