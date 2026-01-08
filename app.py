@@ -24,27 +24,6 @@ TAB_CURRENCY = "Répartition par devise"
 TAB_SECTOR = "Répartition par secteur"
 
 
-# OVERLAP = {
-#     # MSCI World
-#     ("WORLD", "EUROPE"): 0.25,
-#     ("WORLD", "EM"): 0.10,
-#     ("WORLD", "ASIA"): 0.05,
-#     ("WORLD", "LATAM"): 0.03,
-
-#     # Europe
-#     ("EUROPE", "EM"): 0.05,
-#     ("EUROPE", "ASIA"): 0.00,
-#     ("EUROPE", "LATAM"): 0.00,
-
-#     # Emerging Markets
-#     ("EM", "ASIA"): 0.55,
-#     ("EM", "LATAM"): 0.05,
-
-#     # Sub EM
-#     ("ASIA", "LATAM"): 0.00,
-# }
-
-
 # -----------------------------
 # Country mapping to ISO3 (for map)
 # -----------------------------
@@ -483,8 +462,8 @@ def estimate_stocks_universe(meta_by_isin, weights, etf_bucket, overlap):
             if not b_i or not b_j:
                 continue
 
-            key = (b_i, b_j)
-            key_rev = (b_j, b_i)
+            key = (isin_i, isin_j)
+            key_rev = (isin_j, isin_i)
             ov = overlap.get(key, overlap.get(key_rev, 0.0))
 
             if ov > 0:
