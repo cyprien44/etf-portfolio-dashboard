@@ -89,6 +89,7 @@ COUNTRY_TO_ISO3 = {
     "emirats arabes unis": "ARE",
     "qatar": "QAT",
     "koweit": "KWT",
+    "israel": "ISR",
     "turquie": "TUR",
 
     # afrique / latam
