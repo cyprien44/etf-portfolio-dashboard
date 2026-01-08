@@ -889,6 +889,9 @@ else:
 st.markdown("---")
 st.subheader("optimisation – maximiser le nombre effectif de pays")
 
+lam = st.slider("stabilité (lam) : proche du portefeuille actuel", 0.0, 2.0, 0.3, 0.05)
+alpha = st.slider("anti-concentration (alpha) : poids plus équilibrés", 0.0, 2.0, 0.2, 0.05)
+
 
 if "opt_result" not in st.session_state:
     st.session_state["opt_result"] = None
@@ -915,12 +918,13 @@ if not focus_isin:
             res = minimize(
                 neff_objective,
                 x0=x0,
-                args=(isins_opt, expos_by_isin),
+                args=(isins_opt, expos_by_isin, x0, lam, alpha),  # 👈 w0=x0 + lam + alpha
                 method="SLSQP",
                 bounds=bounds,
                 constraints=[cons],
                 options={"maxiter": 300},
             )
+
 
             if not res.success:
                 st.session_state["opt_result"] = {
