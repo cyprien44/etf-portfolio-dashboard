@@ -476,34 +476,20 @@ def estimate_stocks_universe(meta_by_isin, weights, etf_bucket, overlap):
 
 
 
-def estimate_stocks_unique(meta_by_isin, weights, etf_bucket, overlap):
-    """
-    Estimation du nombre d'actions uniques
-    - présence binaire (poids > 0 => ETF actif)
-    - correction par overlap entre univers
-    """
-
-    # ETFs réellement présents
+def estimate_stocks_unique(meta_by_isin, weights, overlap):
     active_isins = [isin for isin, w in weights.items() if w > 0]
 
-    # base : somme brute
     total = 0.0
     for isin in active_isins:
         n = meta_by_isin.get(isin, {}).get("Stocks number")
         if pd.notna(n):
             total += float(n)
 
-    # correction overlap pairwise
     overlap_penalty = 0.0
     for i, isin_i in enumerate(active_isins):
         for isin_j in active_isins[i+1:]:
-            b_i = etf_bucket.get(isin_i)
-            b_j = etf_bucket.get(isin_j)
-            if not b_i or not b_j:
-                continue
-
-            key = (b_i, b_j)
-            key_rev = (b_j, b_i)
+            key = (isin_i, isin_j)
+            key_rev = (isin_j, isin_i)
             ov = overlap.get(key, overlap.get(key_rev, 0.0))
 
             if ov > 0:
@@ -512,6 +498,7 @@ def estimate_stocks_unique(meta_by_isin, weights, etf_bucket, overlap):
                 overlap_penalty += ov * min(n_i, n_j)
 
     return max(total - overlap_penalty, 0)
+
 
 def effective_count_from_exposure(df: pd.DataFrame, col: str = "exposure") -> float:
     """N_eff = 1 / sum(w_i^2) sur une distribution de poids."""
@@ -596,18 +583,6 @@ df_active = df_files[df_files["active"].isin(["1", "true", "yes", "y"])].copy()
 OVERLAP_TAB = "overlap_matrix"
 df_overlap = read_overlap_matrix_pretty(sh, OVERLAP_TAB)
 OVERLAP = overlap_df_to_dict_isin(df_overlap)
-
-# --- Region -> ETF_BUCKET dynamique ---
-if "Region" in df_active.columns:
-    ETF_BUCKET_DYNAMIC = (
-        df_active.set_index("isin")["Region"]
-        .astype(str)
-        .str.strip()
-        .str.upper()
-        .to_dict()
-    )
-else:
-    ETF_BUCKET_DYNAMIC = {}  # fallback si colonne absente
 
 # Stocks number -> int
 df_active["Stocks number"] = pd.to_numeric(df_active["Stocks number"], errors="coerce")
@@ -786,13 +761,7 @@ stocks_universe = estimate_stocks_universe(
     overlap=OVERLAP,
 )
 
-stocks_unique_est = estimate_stocks_unique(
-    meta_by_isin=meta_by_isin,
-    weights=weights_effective,     # <-- IMPORTANT (sert à détecter w>0)
-    etf_bucket=ETF_BUCKET_DYNAMIC,
-    overlap=OVERLAP,
-)
-
+stocks_unique_est = estimate_stocks_unique(meta_by_isin, weights_effective, OVERLAP)
 
 if "focus_isin" in locals() and focus_isin:
     st.info(f"Mode focus actif : **{name_map.get(focus_isin,'')}** ({focus_isin}) → graphes à 100% sur cet ETF")
