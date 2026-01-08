@@ -430,18 +430,9 @@ def aggregate(expos_by_isin: Dict[str, Dict[str, pd.DataFrame]], weights: Dict[s
     out = out.groupby("label", as_index=False)["exposure"].sum().sort_values("exposure", ascending=False)
     return out
 
-def estimate_stocks_universe(meta_by_isin, weights, etf_bucket, overlap):
-    """
-    Estime le nombre d'actions effectivement exposées,
-    en tenant compte :
-    - des poids normalisés
-    - des overlaps structurels entre indices
-    """
-
-    # 1️⃣ ETFs actifs
+def estimate_stocks_universe(meta_by_isin, weights, overlap):
     active_isins = [isin for isin, w in weights.items() if w > 0]
 
-    # 2️⃣ Somme pondérée brute
     total = 0.0
     for isin in active_isins:
         w = weights.get(isin, 0.0)
@@ -449,18 +440,11 @@ def estimate_stocks_universe(meta_by_isin, weights, etf_bucket, overlap):
         if pd.notna(n):
             total += w * float(n)
 
-    # 3️⃣ Correction d'overlap pondérée
     overlap_penalty = 0.0
     for i, isin_i in enumerate(active_isins):
         for isin_j in active_isins[i + 1:]:
             w_i = weights.get(isin_i, 0.0)
             w_j = weights.get(isin_j, 0.0)
-
-            b_i = etf_bucket.get(isin_i)
-            b_j = etf_bucket.get(isin_j)
-
-            if not b_i or not b_j:
-                continue
 
             key = (isin_i, isin_j)
             key_rev = (isin_j, isin_i)
@@ -469,10 +453,10 @@ def estimate_stocks_universe(meta_by_isin, weights, etf_bucket, overlap):
             if ov > 0:
                 n_i = meta_by_isin.get(isin_i, {}).get("Stocks number", 0)
                 n_j = meta_by_isin.get(isin_j, {}).get("Stocks number", 0)
-
                 overlap_penalty += ov * min(n_i, n_j) * min(w_i, w_j)
 
     return max(total - overlap_penalty, 0)
+
 
 
 
@@ -754,12 +738,8 @@ for isin, w in weights_effective.items():
 ter_weighted = (w_ter / w_sum) if w_sum > 0 else None
 
 # Actions (focus-aware)
-stocks_universe = estimate_stocks_universe(
-    meta_by_isin=meta_by_isin,
-    weights=weights_effective,     # <-- IMPORTANT
-    etf_bucket=ETF_BUCKET_DYNAMIC,
-    overlap=OVERLAP,
-)
+stocks_universe = estimate_stocks_universe(meta_by_isin=meta_by_isin, weights=weights_effective, overlap=OVERLAP,)
+
 
 stocks_unique_est = estimate_stocks_unique(meta_by_isin, weights_effective, OVERLAP)
 
