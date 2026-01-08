@@ -87,6 +87,7 @@ COUNTRY_TO_ISO3 = {
     "nouvelle zelande": "NZL",
     "arabie saoudite": "SAU",
     "emirats arabes unis": "ARE",
+    "kazakhstan": "KAZ",
     "qatar": "QAT",
     "koweit": "KWT",
     "israel": "ISR",
