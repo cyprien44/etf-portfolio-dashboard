@@ -691,8 +691,6 @@ with st.sidebar:
             key=k
         )
 
-    st.markdown("---")
-
     # --- Interactive Broker ---
     st.markdown("#### interactive broker")
     for isin in isins_ibkr:
@@ -710,7 +708,6 @@ with st.sidebar:
 
 
     # --- Mode focus 100% (graphes uniquement, sliders inchangés) ---
-    st.markdown("---")
     st.caption("Mode focus (graphes uniquement)")
 
     focus_options = ["(aucun)"] + [f"{name_map.get(i,'')} — {i}" for i in isins]
