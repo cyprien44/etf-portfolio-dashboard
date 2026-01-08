@@ -889,9 +889,8 @@ else:
 st.markdown("---")
 st.subheader("optimisation – maximiser le nombre effectif de pays")
 
-lam = st.slider("stabilité (lam) : proche du portefeuille actuel", 0.0, 100, 2, 2)
-alpha = st.slider("anti-concentration (alpha) : poids plus équilibrés", 0.0, 100.0, 6, 2)
-
+lam = st.slider("stabilité (lam) : proche du portefeuille actuel", 0.0, 100.0, 2.0, 2.0)
+alpha = st.slider("anti-concentration (alpha) : poids plus équilibrés", 0.0, 100.0, 6.0, 2.0)
 
 if "opt_result" not in st.session_state:
     st.session_state["opt_result"] = None
