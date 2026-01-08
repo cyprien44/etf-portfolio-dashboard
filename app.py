@@ -95,6 +95,7 @@ COUNTRY_TO_ISO3 = {
 
     # afrique / latam
     "afrique du sud": "ZAF",
+    "egypte": "EGY",
     "bresil": "BRA",
     "mexique": "MEX",
     "chili": "CHL",
