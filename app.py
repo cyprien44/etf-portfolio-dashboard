@@ -525,8 +525,9 @@ def neff_objective(w, isins, expos_by_isin, w0=None, lam=0.0, alpha=0.0):
 # -----------------------------
 # UI
 # -----------------------------
-st.set_page_config(page_title="ETF dashboard", layout="wide")
-st.title("ETF dashboard — expositions pays / devises / secteurs")
+st.set_page_config(page_title="Tableau de bord ETF", layout="wide")
+st.title("Tableau de bord ETF — expositions par pays / devises / secteurs")
+
 
 gc = get_gspread_client()
 sh = open_sheet(gc)
