@@ -599,7 +599,7 @@ with st.sidebar:
     user = st.selectbox("utilisateur", options=users, index=_find_default_user(users),)
 
     top_n = st.slider("top N", 5, 70, 30)
-    if st.button("recharger les excels"):
+    if st.button("Charger les poids sauvegardés"):
         st.cache_data.clear()
     
         # supprime toutes les clés de sliders de CET user, sans avoir besoin de `isins`
@@ -719,13 +719,13 @@ with st.sidebar:
         focus_isin = focus_choice.split(" — ")[-1].strip()
 
 
-    st.caption("Poids normalisés (référence)")
+    st.caption("Résumé poids du dessus normalisés à 100%")
     for isin, w in sorted(weights.items(), key=lambda kv: kv[1], reverse=True):
         st.write(f"**{name_map.get(isin, '')}** — `{isin}` : **{w:.1%}**")
 
     st.caption(f"Somme normalisée = {sum(weights.values()):.2f}")
 
-    if st.button("Save weights"):
+    if st.button("Sauvegarder ces poids actuel"):
         df_out = df_weights_wide.copy()
         df_out["isin"] = df_out["isin"].astype(str).str.strip()
     
