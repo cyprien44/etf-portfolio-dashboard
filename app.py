@@ -547,7 +547,7 @@ if missing_wide:
     st.stop()
 
 # Users = colonnes à partir de la 3e
-user_cols = list(df_weights_wide.columns[2:])  # 👈 Alexia, Cyprien, Optimisation, etc.
+user_cols = list(df_weights_wide.columns[2:])
 users = [u.strip() for u in user_cols if str(u).strip()]
 
 # fallback sécurité
@@ -590,15 +590,15 @@ if df_active.empty:
 
 # Sidebar controls
 with st.sidebar:
-    st.header("paramètres")
+    st.header("Paramètres")
     def _find_default_user(users_list: list[str]) -> int:
         # essaye de tomber sur "Cyprien" sans être sensible à la casse
         low = [u.lower() for u in users_list]
         return low.index("cyprien") if "cyprien" in low else 0
     
-    user = st.selectbox("utilisateur", options=users, index=_find_default_user(users),)
+    user = st.selectbox("Utilisateur", options=users, index=_find_default_user(users),)
 
-    top_n = st.slider("top N", 5, 70, 30)
+    top_n = st.slider("Afficher les N premiers pays", 5, 70, 30)
     if st.button("Charger les poids sauvegardés"):
         st.cache_data.clear()
     
@@ -680,7 +680,7 @@ with st.sidebar:
     ]
 
     # --- Boursorama ---
-    st.markdown("#### boursorama")
+    st.markdown("#### Boursorama")
     for isin in isins_bourso:
         etf_name = name_map.get(isin, isin)
         k = f"w_{user}_{isin}"
@@ -693,7 +693,7 @@ with st.sidebar:
         )
 
     # --- Interactive Broker ---
-    st.markdown("#### interactive broker")
+    st.markdown("#### Interactive broker")
     for isin in isins_ibkr:
         etf_name = name_map.get(isin, isin)
         k = f"w_{user}_{isin}"
@@ -709,7 +709,7 @@ with st.sidebar:
 
 
     # --- Mode focus 100% (graphes uniquement, sliders inchangés) ---
-    st.caption("Mode focus (graphes uniquement)")
+    st.caption("Mode focus sur un ETF")
 
     focus_options = ["(aucun)"] + [f"{name_map.get(i,'')} — {i}" for i in isins]
     focus_choice = st.selectbox("Afficher 100% sur :", focus_options, index=0)
@@ -719,7 +719,7 @@ with st.sidebar:
         focus_isin = focus_choice.split(" — ")[-1].strip()
 
 
-    st.caption("Résumé poids du dessus normalisés à 100%")
+    st.caption("Résumé des poids normalisés à 100%")
     for isin, w in sorted(weights.items(), key=lambda kv: kv[1], reverse=True):
         st.write(f"**{name_map.get(isin, '')}** — `{isin}` : **{w:.1%}**")
 
@@ -745,7 +745,7 @@ with st.sidebar:
         df_out = df_out.where(pd.notna(df_out), None)
     
         write_tab(sh, WEIGHTS_TAB, df_out)
-        st.success("sauvegardé ✅")
+        st.success("Sauvegardé ✅")
 
 
 # Poids effectifs pour les graphes (focus si activé)
@@ -856,8 +856,8 @@ else:
 st.markdown("---")
 st.subheader("optimisation – maximiser le nombre effectif de pays")
 
-lam = st.slider("stabilité (lam) : proche du portefeuille actuel", 0.0, 100.0, 2.0, 2.0)
-alpha = st.slider("anti-concentration (alpha) : poids plus équilibrés", 0.0, 100.0, 6.0, 2.0)
+lam = st.slider("Stabilité (lam) : proche du portefeuille actuel", 0.0, 100.0, 2.0, 2.0)
+alpha = st.slider("Anti-concentration (alpha) : poids plus équilibrés", 0.0, 100.0, 6.0, 2.0)
 
 if "opt_result" not in st.session_state:
     st.session_state["opt_result"] = None
